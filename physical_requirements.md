@@ -121,8 +121,9 @@ system + crane + carry box** in a single ⌀250 mm footprint.
   expansion shield — model TBD)*
 - **D12 (materials)** — prototypes in **PLA**; final chassis + crane in
   **PETG-CF**; **TPU** where compliance helps (bumper skin/pads, optional wheel
-  fairings, printed springs). Operational note: CF filaments wear brass nozzles —
-  hardened-steel nozzle recommended for the final runs.
+  fairings, printed springs). **Operational note: user has a hardened-steel
+  nozzle installed — PETG-CF/abrasive filaments are cleared for the final
+  runs regardless of nozzle wear.**
 - **D13 (slew transmission — option registered, not decided)**: direct horn
   drive is the default; a **printed spur gear ring on the turret + servo pinion
   (~2–3:1)** is allowed if bench friction tests show the slew servo struggles
