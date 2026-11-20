@@ -30,13 +30,21 @@ system + crane + carry box** in a single ⌀250 mm footprint.
   too far forward raises sideways-tip risk. Initial instinct: ~10% (≈12.5 mm)
   ahead of body centreline. To be settled by support-triangle analysis
   (stability section below). **[analysis pending]**
+- **PR-32** `[A]` **Drive voltage limiting**: TT motors are rated ≤6 V while
+  the pack is 7.4–8.4 V ⇒ cap motor PWM duty in software (~75% max; final
+  value depends on the H-bridge's voltage drop, QC-1). No hardware needed.
 - **PR-9** `[A]` Wheel wells: axle at 33.5 mm height vs 23 mm floor ⇒ wheels sit
   in body cutouts; plan the shell as bed-tray + 2–3 printed shell sections.
 
 ## 4. Layout onboard
-- **PR-10** `[user]` Crane occupies the **front 60%** of the plan view, the **small
-  box the rear 40%** (box contents/capacity to define — **[Q5]**).
+- **PR-10** `[user]` Crane occupies the **front 60%** of the plan view, the
+  **storage backpack ("small box") the rear 40%**. Box: **~3–5 socks** +
+  maybe one small toy; the crane dumps into it from above after slewing rear.
 - **PR-11** `[user]` **Low center of gravity is a primary design driver.**
+- **PR-33** `[A]` The current `stl/` desktop-digger parts are **learning
+  artifacts**, not car parts; the car-phase turret/slew ring will be
+  re-derived, carrying over the horn coupling and ⌀10 wire pass-through
+  concepts.
 
 ## 5. Front bumper + sensing
 - **PR-12** `[user]` Rounded **spring-loaded front crash bar** acting as the hard
@@ -68,7 +76,7 @@ system + crane + carry box** in a single ⌀250 mm footprint.
   payload at ±60° reach — compute the required rear mass.
 - **SM-3** Track vs wheelbase trade-off behind PR-8 (needs actual track width).
 
-## 9. Decisions log (confirmed with user)
+## 8. Decisions log (confirmed with user)
 - **D1** — Chassis: **custom Roomba-style chassis**, reusing ZYC0055 components
   (drivetrain motors, battery holder); power bank is an *option* where useful
   (e.g. logic rail). *(Q1 answered)*
@@ -107,38 +115,132 @@ system + crane + carry box** in a single ⌀250 mm footprint.
   yellow TT gearbox motors** (typ. gearbox ~66 × 22.5 × 18 mm, twin ⌀3 plastic
   output shafts, ~1:48 gearing class, 3–6 V — *verify against calipers*), as
   in `car.webp`: acrylic ZYC0055 platform, 4×AA holder amidships, dome
-  universal wheel on a 4-screw flange at the rear.
+  universal wheel on a 4-screw flange at the rear. *(updated by HardwareImages
+  folder: real chassis is black moulded ABS kit plate; battery box on the real
+  car is the 2×18650 holder; driver is a blue H-bridge board under the Nano
+  expansion shield — model TBD)*
+- **D12 (materials)** — prototypes in **PLA**; final chassis + crane in
+  **PETG-CF**; **TPU** where compliance helps (bumper skin/pads, optional wheel
+  fairings, printed springs). Operational note: CF filaments wear brass nozzles —
+  hardened-steel nozzle recommended for the final runs.
+- **D13 (slew transmission — option registered, not decided)**: direct horn
+  drive is the default; a **printed spur gear ring on the turret + servo pinion
+  (~2–3:1)** is allowed if bench friction tests show the slew servo struggles
+  under full 200 g reach. Trade-off: ~2–3× torque for ~2–3× slower slew
+  (still ≥200°/s), plus ~0.5–1° tooth backlash — acceptable at sock-picking
+  accuracy. Decision deferred to mechanics phase with real friction data.
+- **D14 (chassis provenance)** — the Roomba-style chassis is designed **from
+  scratch**; *no* moulded/machined part is reused (no acrylic, no kit plate).
+  Only **components** are carried over: 2× TT motors, 2× ⌀67 wheels (yellow
+  hubs), 2×18650 holder, 4×AA holder, dome caster, blue H-bridge module, Nano
+  + expansion shield, MKR, dual-ultrasonic units, buzzer modules, printed
+  accordion spring.
 
-## 10. Still open (do not design before these close)
-- [ ] **Q10 → resolved as D8** pending one user check: does the 4×AA holder from
-      the ZYC0055 actually exist and can it be spared from the old car?
-- [ ] **Q11 → resolved as D9** (≤200° working arc, slew servo fixed to base,
-      crane servos rotate on the turret, unwind discipline; no slip ring, no
-      true-360 servo mounting gymnastics).
-- [ ] **Q12 → resolved as D7/D8** (hollow shell + rear-low ballast pockets,
-      not a ballast-filled body, no U-notch) — awaiting user acceptance.
-- [ ] **Q9 (measurements, how-to below — ruler only):**
-  1. **Track width** = distance between the two wheels' ground-contact centres.
-     Easiest: stand the car on paper, mark both contact patches, measure
-     centre-to-centre. This sets the sideways-tip defence (support triangle).
-  2. **Wheel hub & motor mounts**: how the 67 mm wheel grips the TT motor's
-     ⌀3 shaft (press-on hub? screw? D-flat?), and how the TT motors fasten to
-     the acrylic (bracket? double-sticky? the kit's plastic clamps?) — we must
-     reprint equivalents on the new chassis.
-  3. **Caster dome**: outer diameter, total height (should be ≈20 mm per your
-     spec), the 4-screw flange spacing, and position from the rear edge.
-  4. **18650 holder** outer dimensions (for the bay): if 2×18650 holder is not
-     on hand, note that too.
-  5. **Front bumper span**: how wide the crash bar should wrap around the front
-     (chord across the ⌀250 at the front), and the free travel your printed
-     accordion spring has when compressed by ~5 mm.
-- [ ] **Q6** Side/rear sensor coverage (which spare modules).
-- [ ] **Q7** Docking/charging: out of scope for v1?
-- [ ] **QC-TT (calipers, when built)** confirm TT gearbox dims: length, width,
-      height, shaft-to-mount-face distances, and the two rear-mount hole
-      positions on the gearbox front face.
+## 9. Measured interfaces (Q9 answers — design inputs)
+- **MI-1 TT motor mount** `[measured]`: 2 × ⌀3 fixing screws, **17 mm
+  centre-to-centre**, on the motor face; that screw centreline is **19 mm
+  from the axle centreline** → printed bracket geometry per side.
+- **MI-2 Track width** `[user decision]`: not bound to the old car. Target
+  **outer track ≈ 230–250 mm** (as stable as fits; wheels nearly tangent to the
+  ⌀250 silhouette, recessed into wheel wells; wells must clear ⌀67 wheel +
+  tyre width; body silhouette stays ⌀250).
+- **MI-3 Caster** `[measured + user brief]`: mount plate **48 × 33 mm**;
+  fixing screws **2 × 39 mm c-c** on opposite sides of the dome; dome casing
+  **⌀26–30 tapered**; total height ≈20 mm. Position from the rear edge: chosen
+  by assistant to support **40–50 mm threshold climbs** — see IC-5/Open (likely
+  ≈30–35 mm from rear edge, plate flush with the internal floor; battery sits
+  directly above it per PR-6).
+- **MI-4 2×18650 holder** `[measured]`: **92 × 43 × 22 mm**; mount holes square
+  pattern **39 × 30 mm**, **21 mm from the short side opposite the
+  cable/switch end**; cells load from the cable end. Bay must allow quick
+  cell swap.
+- **MI-5 Bumper** `[user decision]`: **straight linear push** (no pivot),
+  covering **±40° from centreline (80° arc ⇒ chord ≈ 161 mm at the ⌀250
+  edge)**; travel **5–8 mm**.
+  - *Early detection with full travel:* the trip sensor fires early (~2–3 mm)
+    while a series compliance (printed accordion spring / TPU pad) absorbs the
+    remaining travel — same principle as commercial robot vacuums.
+  - *Trip sensor candidates (on hand)*: hall effect/linear hall with a small
+    magnet on the bar (contactless, no plunger wear — recommended), button
+    switch module as wired-OR backup.
+  - Bar/skin printed in TPU (D12); travel guided by printed rails.
 
-## 11. Assistant recommendation on internal architecture (answering Q12)
+## 10. Consistency scan & decision tree
+
+```
+Mission: roam → find sock/toy → pick (≤200 g, ±60° front wedge) → store (backpack, rear 40%)
+│
+├─ MOBILITY (drives 67 mm wheels, track 230–250) ──────────── stable?
+│   ├─ Drive power: 2×18650 = 7.4–8.4 V vs TT motors rated ≤6 V
+│   │   → IC-1 RESOLVED: cap PWM duty (≈75% max) in software; verify H-bridge
+│   │     model (L298N-class drop actually helps; MX1508-class needs stricter cap) [QC-1]
+│   ├─ MKR VIN must NOT see 8.4 V → MKR on power bank USB only (D8) ✓
+│   ├─ Servo rail: 4×AA = 6.0 V (D8) — fresh alkalines peak ≈6.4 V
+│   │   → IC-3: prefer NiMH 4×AA (4.8–5.2 V) or accept short peaks [QC-2]
+│   ├─ Thresholds 40–50 mm vs ⌀67 wheels (r=33.5): a 50 mm step is 75% of the
+│   │   wheel radius — only climbable with CG-forward pivot + chamfered nose
+│   │   + caster that never catches
+│   │   → IC-5 OPEN: accept 25–35 mm realistic, or add trailing-arm caster +
+│   │     nose ramp for the 40–50 stretch [USER — Q13]
+│   └─ Track/axle placement vs tipping: needs SM-1/SM-2 with real masses
+│       (structure not yet drawn) [BENCH + MATH]
+│
+├─ CRANE (4× SG90, one = slew; payload 200 g; over-reach 70–80 mm)
+│   ├─ Torque at shoulder with 200 g payload ⇒ torque multiplier required
+│   │   → mechanisms phase decides: crank+link / counterbalance / gearing /
+│   │     DC-motor winch reserve (D13-style option list) [MECHANICS]
+│   ├─ Slew ≤200° working arc + 360° mechanical for rear dump (D4/D9) ✓
+│   ├─ Slew transmission: direct vs gear ring (D13) [MECHANICS + BENCH]
+│   └─ Spare servo role (elbow? counter drum?) [OPEN — MECHANICS]
+│
+├─ STORAGE (backpack rear 40%, ~3–5 socks)
+│   ├─ Crane dumps from above into body-fixed rear compartment ✓
+│   └─ Lid/opening/capacity fine-tuning [LAYOUT]
+│
+├─ SENSING (front ±40° bumper + 2× dual ultrasonic + IR obstacle)
+│   ├─ Bumper mechanics: linear slide + early trip + over-travel ✓ MI-5
+│   ├─ Ultrasonic mounting height/tilt (old zip-tie height too low for
+│   │   reliable floor echo) [LAYOUT]
+│   └─ Side/rear coverage [OPEN — Q6]
+│
+├─ POWER (D8 rails) — QC-2 above; add: total current budget check
+│   (2 drive stalls ~1.5–2 A? measure TT stall @5V-equivalent) [BENCH]
+│
+└─ CONTROL (USB/WebSerial keyboard first) — bench rig stays off-robot;
+    only crane services rotate ✓ (IC-8 resolved)
+```
+
+**Inconsistency scan result:** no fatal contradictions found. Open/conflicting
+leaves to settle before mechanics:
+1. **IC-5 / Q13** — threshold target: realistic 25–35 mm vs stretch 40–50 mm
+   (decides caster type, nose shape).
+2. **QC-1** — identify the blue H-bridge module (voltage + drop) from its
+   printing/silkscreen.
+3. **QC-2** — which 4×AA chemistry (fresh alkaline peaks 6.4 V vs NiMH 4.8–5.2 V).
+4. Smile-item: the existing `stl/` desktop parts are **learning artifacts**;
+   the car-phase turret/ring will be re-derived (the horn-coupling and
+   pass-through concepts carry over) — PR-33.
+## 11. Open items (consolidated)
+- [ ] **Q13 (from IC-5)** — threshold target: **25–35 mm realistic** (caster as
+      spec'd, chamfered nose) or **40–50 mm stretch** (adds trailing-arm caster
+      + nose ramp + stricter CG discipline)? Decides caster/nose geometry.
+- [ ] **QC-1** — identify the blue H-bridge module (read its silkscreen; need max
+      voltage + voltage drop) → finalises PR-32 PWM cap.
+- [ ] **QC-2** — 4×AA chemistry for the servo rail: NiMH (4.8–5.2 V) preferred;
+      fresh alkalines peak ≈6.4 V (above SG90 nominal, below its absolute max).
+- [ ] **Q6** — side/rear sensor coverage (which spare modules, if any).
+- [ ] **Q7** — docking/charging: confirmed out of scope for v1?
+- [ ] **QC-TT (calipers)** — TT gearbox: L×W×H, shaft-to-face distances, mount
+      hole positions (cross-check MI-1).
+- [ ] **BENCH-1** — TT motor stall current at ≈5 V equivalent (for the power
+      budget in §10 POWER).
+- [ ] **BENCH-2** — printed accordion spring: force vs 5–8 mm travel (bumper
+      threshold setting, MI-5).
+- [ ] **BENCH-3** — slew friction with a loaded deck (gates D13 direct-vs-geared).
+- [ ] **MATH-1** — SM-1/SM-2/SM-3 stability + ballast budget once the layout
+      mass table exists (needs PR-8 wheel placement decision).
+
+## 12. Assistant recommendation on internal architecture (answering Q12)
 Neither "fill the entire body with ballast" nor a U-shaped front notch is my
 recommendation. Rationale:
 - A filled body adds 1–2 kg of dead mass the drive motors must haul, and ballast
