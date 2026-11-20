@@ -66,12 +66,12 @@ system + crane + carry box** in a single ⌀250 mm footprint.
   sonar- and IR-invisible — the hardest case) · fine gripper approach ranging ·
   **negative-obstacle (stairs/cliff) detection** · **threshold crossing up to
   the Q13 rise budget without false cliff trips**. Utilisation plan:
-  **D15 / §5b**.
+  **D14 / §5b**.
 - **PR-14b** `[A]` Bumper z-band: the crash bar must cover the touchable
   silhouette, roughly **z 10–150 mm**, so nothing at body height slides under
   it.
 
-### 5b. Sensor plan (D15 — proposal; owned modules only)
+### 5b. Sensor plan (D14 — proposal; owned modules only)
 | Module | Mount | Job |
 |---|---|---|
 | Stereo sonar **board A** (parallel pair, unsplitable) | Body **front**, **level (0° tilt)**, height 60–80 mm | Vertical surfaces (walls/legs/boxes) at cruise ranges **+ overhead crossbars**: a 15 cm crossbar enters the level beam cone from ≈30 cm out ⇒ stop before entering. At ≥25 cm the cone spans z ≈ 0–150 mm — the whole mid-band between floor and body height |
@@ -94,7 +94,7 @@ class is usually the *target* (sock), not an obstacle; handled by pick logic.
   a sock or shadow can blind one channel, never both; wide stairs blind both.
 - **FLOOR-2 threshold climb**: floor *present and closer* (stronger reflectance)
   never trips FLOOR-1 ⇒ climbing stays enabled up to the Q13 rise budget
-  (25–35 tuned / 40–50 stretch).
+  (target 40–50 mm, D17 — lowering requires an explicit approved trade-off).
 - **FLOOR-3 single-channel loss** = not a cliff: log, slow, continue.
 
 **Clearance & rotation rules (CEIL + ROT):**
@@ -159,8 +159,9 @@ class is usually the *target* (sock), not an obstacle; handled by pick logic.
   **2×18650 Li-ion → drive motors + Nano VIN** (7.4 V is inside Nano VIN spec,
   out of SG90 spec); **the ZYC0055 4×AA holder → servo rail** (4×AA = 6.0 V
   nominal, dead-center of the SG90's 4.8–6 V spec; SG90 stall ~0.7 A × 2 =
-  1.4 A < 4×AA realistic pulse capability for short stalls); **power bank
-  (5 V USB) → MKR 1010 only**. Common GND across all three rails.
+  1.4 A < 4×AA realistic pulse capability for short stalls); **1× Luxorparts
+  Li-Po 1200 mAh → MKR 1010 house rail** (D18); the 5 V power bank is demoted
+  to a bench/dev tool (no longer on the robot). Common GND across all three rails.
 - **D9 (proposed — slew architecture, answers "motors under the ring")**:
   the **slew servo stays fixed to the base**, driving the turret through the
   horn/deck coupling already moulded into the deck centre — its wires never
@@ -194,7 +195,7 @@ class is usually the *target* (sock), not an obstacle; handled by pick logic.
   under full 200 g reach. Trade-off: ~2–3× torque for ~2–3× slower slew
   (still ≥200°/s), plus ~0.5–1° tooth backlash — acceptable at sock-picking
   accuracy. Decision deferred to mechanics phase with real friction data.
-- **D15 (proposed)** — Sensor plan, table in §5b with **z-coverage ladder**,
+- **D14 (proposed)** — Sensor plan, table in §5b with **z-coverage ladder**,
   **floor rules FLOOR-1..3** (two-channel cliff vote ≠ sock shadow; thresholds
   never trip it) and **clearance gates**: sonar board A front **level**
   (vertical surfaces + overhead crossbars from ≈30 cm; covers z 0–150 at ≥25 cm),
@@ -203,12 +204,36 @@ class is usually the *target* (sock), not an obstacle; handled by pick logic.
   vibration = contact last-resort**; ceiling state machine locks crane/rotation
   under low furniture (PR-1b no-go zones); missing echo ⇒ obstacle; staggered
   pings. v2: TCS3200 + LDR for sock discrimination. *(pending user acceptance)*
-- **D14 (chassis provenance)** — the Roomba-style chassis is designed **from
+- **D15 (chassis provenance)** — the Roomba-style chassis is designed **from
   scratch**; *no* moulded/machined part is reused (no acrylic, no kit plate).
   Only **components** are carried over: 2× TT motors, 2× ⌀67 wheels (yellow
   hubs), 2×18650 holder, 4×AA holder, dome caster, blue H-bridge module, Nano
   + expansion shield, MKR, dual-ultrasonic units, buzzer modules, printed
   accordion spring.
+
+- **D16 (Q12 accepted)** — **Hollow-shell architecture locked**: full ⌀250
+  cylinder shell (2–3 printed sections), no front notch, tunable ballast
+  pockets at the rear-bottom perimeter (washers/bolts/scrap). Fixed rear mass:
+  the 2×18650 pack; the MKR LiPo (23 g, 4.7 mm thin) tucks into the
+  rear-bottom pocket too. Ballast tuned at bench to keep CG behind the drive
+  axle at full 200 g reach (computed in SM-2).
+- **D17 (Q13 answered)** — Threshold climb **target 40–50 mm** (roof → plus
+  trailing-arm caster, nose ramp, strict CG discipline). **Lowering protocol**:
+  MATH-1 may propose a lower number only together with its trade-offs
+  (geometry, mass, risk), and only an explicit user approval lowers the target —
+  nothing drops silently.
+- **D18 (proposed — LiPo rails, from D8 review)** — Luxorparts Li-Po 3.7 V
+  1200 mAh (JST-PH, 23.3 g, 63×36×4.7 mm, **max discharge 1 C = 1.2 A**):
+  - **Cannot power the servo rail**: 3.7 V drops SG90 torque to ≈1.4 kg·cm
+    (payload needs ≥1.8), and 1.2 A < the ≈1.5 A crane transient. → **4×AA
+    rail stays** (D8); the "spare the 4×AA holder?" question is answered: no.
+  - **Adopted for the MKR rail** instead of the power bank (~200 g → 23 g):
+    ~250 mA avg incl. WiFi ⇒ ~4–5 h runtime. Firmware keeps ops above
+    **3.3 V** (the cell's own 2.4 V cutoff is too deep for cell life).
+  - *(pending: QC-LiPo — what charger is owned? TP4056-style board or LiPo
+    charger; never charge unattended)*
+- **D5 (revised by D8/D18)** — power bank (5 V USB) is **demoted to bench
+  tool**; on-robot logic rail is the MKR LiPo.
 
 ## 9. Measured interfaces (Q9 answers — design inputs)
 - **MI-1 TT motor mount** `[measured]`: 2 × ⌀3 fixing screws, **17 mm
@@ -273,7 +298,7 @@ Mission: roam → find sock/toy → pick (≤200 g, ±60° front wedge) → stor
 │   ├─ Crane dumps from above into body-fixed rear compartment ✓
 │   └─ Lid/opening/capacity fine-tuning [LAYOUT]
 │
-├─ SENSING (strategy D15 proposal, §5b — owned modules only)
+├─ SENSING (strategy D14 proposal, §5b — owned modules only)
 │   ├─ Bumper = contact truth, z 10–150 mm (MI-5 + PR-14b) ✓
 │   ├─ Sonar board A front, LEVEL: walls/legs + 15 cm crossbars from ≈30 cm;
 │   │   cone covers z 0–150 at ≥25 cm (the whole mid-band) ✓
@@ -286,8 +311,10 @@ Mission: roam → find sock/toy → pick (≤200 g, ±60° front wedge) → stor
 │   ├─ Close-range backstop: IR obstacle module for sonar-invisible items ✓
 │   └─ v2 discrimination: TCS3200 + LDR pair at hover [PROPOSED]
 │
-├─ POWER (D8 rails) — QC-2 above; add: total current budget check
-│   (2 drive stalls ~1.5–2 A? measure TT stall @5V-equivalent) [BENCH]
+├─ POWER (D8 + D18 rails: 2×18650 drive · 4×AA servos · 1× LiPo MKR house rail)
+│   ├─ Total current budget check (2 drive stalls ~1.5–2 A? measure TT stall
+│   │   @5V-equivalent) [BENCH]
+│   └─ QC-LiPo — charger for the 1200 mAh cells (owned? TP4056-class) [OPEN]
 │
 └─ CONTROL (USB/WebSerial keyboard first) — bench rig stays off-robot;
     only crane services rotate ✓ (IC-8 resolved)
@@ -295,8 +322,8 @@ Mission: roam → find sock/toy → pick (≤200 g, ±60° front wedge) → stor
 
 **Inconsistency scan result:** no fatal contradictions found. Open/conflicting
 leaves to settle before mechanics:
-1. **IC-5 / Q13** — threshold target: realistic 25–35 mm vs stretch 40–50 mm
-   (decides caster type, nose shape).
+1. **IC-5 / Q13 — RESOLVED (D17)**: climb target **40–50 mm**; MATH-1 may
+   propose lowering only with explicit trade-offs the user approves.
 2. **QC-1** — identify the blue H-bridge module (voltage + drop) from its
    printing/silkscreen.
 3. **QC-2** — which 4×AA chemistry (fresh alkaline peaks 6.4 V vs NiMH 4.8–5.2 V).
@@ -304,14 +331,23 @@ leaves to settle before mechanics:
    the car-phase turret/ring will be re-derived (the horn-coupling and
    pass-through concepts carry over) — PR-33.
 ## 11. Open items (consolidated)
-- [ ] **Q13 (from IC-5)** — threshold target: **25–35 mm realistic** (caster as
-      spec'd, chamfered nose) or **40–50 mm stretch** (adds trailing-arm caster
-      + nose ramp + stricter CG discipline)? Decides caster/nose geometry.
-- [ ] **QC-1** — identify the blue H-bridge module (read its silkscreen; need max
-      voltage + voltage drop) → finalises PR-32 PWM cap.
-- [ ] **QC-2** — 4×AA chemistry for the servo rail: NiMH (4.8–5.2 V) preferred;
-      fresh alkalines peak ≈6.4 V (above SG90 nominal, below its absolute max).
-- [ ] **Q6** — are D15's safe-rotation rules (ROT-1..3) and front/rear sonar
+- [x] **Q13 (from IC-5)** — RESOLVED: climb target **40–50 mm** (D17); lowering
+      only with a user-approved trade-off prompt.
+- [x] **Q12** — RESOLVED: hollow-shell + rear-low ballast pockets accepted
+      (D16).
+- [ ] **QC-1 (backlog — plain-language rewrite)** — "Look closely at the blue
+      motor board and tell me what's printed on it" (photos help): the chip
+      name and any labels/local-printing on it. Until this is known, drive
+      motors stay capped at ~75 % power (PR-32) so unknown board behaviour
+      (over-voltage drop, minimum duty, board 5 V reg) can't bite.
+- [ ] **QC-2 (backlog — plain-language rewrite)** — "Which AA batteries will
+      you put in the 4×AA servo rail?" Prefer **NiMH rechargeables** (4.8–5.2 V,
+      high current, rechargeable); avoid fresh alkalines (up to 6.4 V: above
+      servo nominal) and avoid lithium 1.5 V AAs (7 V peaks).
+- [ ] **QC-LiPo** — charging plan for the 1200 mAh Li-Po cells (D18): is a
+      TP4056-class board or Li-Po charger owned? Adopt the safety rules: charge
+      on a non-flammable surface, attended only; firmware floor 3.3 V.
+- [ ] **Q6** — are D14's safe-rotation rules (ROT-1..3) and front/rear sonar
       coverage enough, or does the robot need more side/rear sensing?
 - [ ] **Q7** — docking/charging: confirmed out of scope for v1?
 - [ ] **QC-TT (calipers)** — TT gearbox: L×W×H, shaft-to-face distances, mount
@@ -324,7 +360,7 @@ leaves to settle before mechanics:
 - [ ] **MATH-1** — SM-1/SM-2/SM-3 stability + ballast budget once the layout
       mass table exists (needs PR-8 wheel placement decision).
 
-## 12. Assistant recommendation on internal architecture (answering Q12)
+## 12. Internal architecture — hollow shell + rear ballast (accepted, D16)
 Neither "fill the entire body with ballast" nor a U-shaped front notch is my
 recommendation. Rationale:
 - A filled body adds 1–2 kg of dead mass the drive motors must haul, and ballast
@@ -333,9 +369,9 @@ recommendation. Rationale:
   internal volume, and print simplicity — and the crane only needs ~7–8 cm of
   over-reach, achievable with boom length instead (crane occupies the front 60%
   anyway, so the shoulder sits ahead of the body centre already).
-- **D7 (proposed)**: keep the full ⌀250 cylinder shell (2–3 printed sections);
-  hollow interior; **tunable ballast pockets at the rear-bottom perimeter**
-  (free mass: washers/bolts/scrap from the drawers) plus the 18650 pack + power
-  bank as fixed rear mass. Ballast amount tuned at bench time to keep the CG
-  behind the drive-axle line at full ±60°/200 g reach — computed in SM-2 once
-  measurements (Q9) arrive.
+- **D7 → D16 (accepted)**: keep the full ⌀250 cylinder shell (2–3 printed
+  sections); hollow interior; **tunable ballast pockets at the rear-bottom
+  perimeter** (free mass: washers/bolts/scrap from the drawers) plus the 18650
+  pack and the flat MKR LiPo as fixed rear mass. Ballast amount tuned at bench
+  time to keep the CG behind the drive-axle line at full 200 g reach —
+  computed in SM-2 once measurements (Q9) arrive.
