@@ -159,9 +159,9 @@ class is usually the *target* (sock), not an obstacle; handled by pick logic.
   **2×18650 Li-ion → drive motors + Nano VIN** (7.4 V is inside Nano VIN spec,
   out of SG90 spec); **the ZYC0055 4×AA holder → servo rail** (4×AA = 6.0 V
   nominal, dead-center of the SG90's 4.8–6 V spec; SG90 stall ~0.7 A × 2 =
-  1.4 A < 4×AA realistic pulse capability for short stalls); **1× Luxorparts
-  Li-Po 1200 mAh → MKR 1010 house rail** (D18); the 5 V power bank is demoted
-  to a bench/dev tool (no longer on the robot). Common GND across all three rails.
+  1.4 A < 4×AA realistic pulse capability for short stalls); **power bank
+  (5 V USB) → MKR 1010 house rail** (a D18-approved LiPo trim could replace it
+  later). Common GND across all three rails.
 - **D9 (proposed — slew architecture, answers "motors under the ring")**:
   the **slew servo stays fixed to the base**, driving the turret through the
   horn/deck coupling already moulded into the deck centre — its wires never
@@ -214,26 +214,30 @@ class is usually the *target* (sock), not an obstacle; handled by pick logic.
 - **D16 (Q12 accepted)** — **Hollow-shell architecture locked**: full ⌀250
   cylinder shell (2–3 printed sections), no front notch, tunable ballast
   pockets at the rear-bottom perimeter (washers/bolts/scrap). Fixed rear mass:
-  the 2×18650 pack; the MKR LiPo (23 g, 4.7 mm thin) tucks into the
-  rear-bottom pocket too. Ballast tuned at bench to keep CG behind the drive
+  the 2×18650 pack + the power bank (MKR rail; a D18-approved Li-Po would
+  swap in here). Ballast tuned at bench to keep CG behind the drive
   axle at full 200 g reach (computed in SM-2).
 - **D17 (Q13 answered)** — Threshold climb **target 40–50 mm** (roof → plus
   trailing-arm caster, nose ramp, strict CG discipline). **Lowering protocol**:
   MATH-1 may propose a lower number only together with its trade-offs
   (geometry, mass, risk), and only an explicit user approval lowers the target —
   nothing drops silently.
-- **D18 (proposed — LiPo rails, from D8 review)** — Luxorparts Li-Po 3.7 V
-  1200 mAh (JST-PH, 23.3 g, 63×36×4.7 mm, **max discharge 1 C = 1.2 A**):
-  - **Cannot power the servo rail**: 3.7 V drops SG90 torque to ≈1.4 kg·cm
-    (payload needs ≥1.8), and 1.2 A < the ≈1.5 A crane transient. → **4×AA
-    rail stays** (D8); the "spare the 4×AA holder?" question is answered: no.
-  - **Adopted for the MKR rail** instead of the power bank (~200 g → 23 g):
-    ~250 mA avg incl. WiFi ⇒ ~4–5 h runtime. Firmware keeps ops above
-    **3.3 V** (the cell's own 2.4 V cutoff is too deep for cell life).
-  - *(pending: QC-LiPo — what charger is owned? TP4056-style board or LiPo
-    charger; never charge unattended)*
-- **D5 (revised by D8/D18)** — power bank (5 V USB) is **demoted to bench
-  tool**; on-robot logic rail is the MKR LiPo.
+- **D18 (option registered — zero-purchase default)** — **Li-Po trim for the
+  MKR rail, pending purchase approval** (not owned). Items: 1× Luxorparts
+  Li-Po 3.7 V 1200 mAh (JST-PH, 23.3 g, 63×36×4.7 mm, max discharge 1 C =
+  1.2 A) + a TP4056-class single-cell charger board.
+  - Gain if approved: MKR rail goes from the power bank (~200 g) to a 23 g
+    flat cell ⇒ **~−180 g**, ~4–5 h runtime at ~250 mA avg, and the thin cell
+    tucks into a rear-bottom D16 pocket. Firmware floor 3.3 V (the cell's own
+    2.4 V cutoff is too deep for cell life).
+  - Non-role, regardless of approval: **never the servo rail** (4×AA stays —
+    D8): 3.7 V drops SG90 torque to ≈1.4 kg·cm (payload needs ≥1.8) and
+    1.2 A < the ≈1.5 A crane transient.
+  - If declined (default): power bank stays on-robot as the MKR rail and
+    rear-low fixed ballast (original D8/D16 behaviour — it was always also
+    counterweight mass, so the robot loses nothing except mass trimmability).
+- **D5 (revised)** — power bank (5 V USB) **remains the MKR logic rail on the
+  robot**; swap to the Li-Po only if D18 gets purchase approval.
 
 ## 9. Measured interfaces (Q9 answers — design inputs)
 - **MI-1 TT motor mount** `[measured]`: 2 × ⌀3 fixing screws, **17 mm
@@ -311,10 +315,11 @@ Mission: roam → find sock/toy → pick (≤200 g, ±60° front wedge) → stor
 │   ├─ Close-range backstop: IR obstacle module for sonar-invisible items ✓
 │   └─ v2 discrimination: TCS3200 + LDR pair at hover [PROPOSED]
 │
-├─ POWER (D8 + D18 rails: 2×18650 drive · 4×AA servos · 1× LiPo MKR house rail)
+├─ POWER (D8 rails: 2×18650 drive · 4×AA servos · power bank MKR; D18 Li-Po
+│   │   = optional mass trim, needs purchase approval)
 │   ├─ Total current budget check (2 drive stalls ~1.5–2 A? measure TT stall
 │   │   @5V-equivalent) [BENCH]
-│   └─ QC-LiPo — charger for the 1200 mAh cells (owned? TP4056-class) [OPEN]
+│   └─ QC-LiPo — approve buying 1× Li-Po 1200 mAh + TP4056-class charger? [OPEN]
 │
 └─ CONTROL (USB/WebSerial keyboard first) — bench rig stays off-robot;
     only crane services rotate ✓ (IC-8 resolved)
@@ -344,9 +349,12 @@ leaves to settle before mechanics:
       you put in the 4×AA servo rail?" Prefer **NiMH rechargeables** (4.8–5.2 V,
       high current, rechargeable); avoid fresh alkalines (up to 6.4 V: above
       servo nominal) and avoid lithium 1.5 V AAs (7 V peaks).
-- [ ] **QC-LiPo** — charging plan for the 1200 mAh Li-Po cells (D18): is a
-      TP4056-class board or Li-Po charger owned? Adopt the safety rules: charge
-      on a non-flammable surface, attended only; firmware floor 3.3 V.
+- [ ] **QC-LiPo (D18) — purchase approval needed** — the Li-Po and charger are
+      **not owned** (my earlier note wrongly assumed they were). Option on the
+      table: 1× Luxorparts Li-Po 1200 mAh + TP4056-class charger ⇒ ~−180 g on
+      the MKR rail. Zero-purchase default: keep the power bank (it also works
+      as rear-low ballast, so nothing breaks without it). If approved later:
+      charge attended on a non-flammable surface; firmware floor 3.3 V.
 - [ ] **Q6** — are D14's safe-rotation rules (ROT-1..3) and front/rear sonar
       coverage enough, or does the robot need more side/rear sensing?
 - [ ] **Q7** — docking/charging: confirmed out of scope for v1?
@@ -372,6 +380,7 @@ recommendation. Rationale:
 - **D7 → D16 (accepted)**: keep the full ⌀250 cylinder shell (2–3 printed
   sections); hollow interior; **tunable ballast pockets at the rear-bottom
   perimeter** (free mass: washers/bolts/scrap from the drawers) plus the 18650
-  pack and the flat MKR LiPo as fixed rear mass. Ballast amount tuned at bench
+  pack and the power bank as fixed rear mass (a D18-approved Li-Po could later
+  trim this by ~180 g). Ballast amount tuned at bench
   time to keep the CG behind the drive-axle line at full 200 g reach —
   computed in SM-2 once measurements (Q9) arrive.
