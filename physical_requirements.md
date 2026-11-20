@@ -282,9 +282,8 @@ Mission: roam → find sock/toy → pick (≤200 g, ±60° front wedge) → stor
 │   │   → IC-3: prefer NiMH 4×AA (4.8–5.2 V) or accept short peaks [QC-2]
 │   ├─ Thresholds 40–50 mm vs ⌀67 wheels (r=33.5): a 50 mm step is 75% of the
 │   │   wheel radius — only climbable with CG-forward pivot + chamfered nose
-│   │   + caster that never catches
-│   │   → IC-5 OPEN: accept 25–35 mm realistic, or add trailing-arm caster +
-│   │     nose ramp for the 40–50 stretch [USER — Q13]
+│   │   + caster that never catches → target confirmed 40–50 mm (D17);
+│   │   MATH-1 may propose lower only with approved trade-offs [RESOLVED]
 │   └─ Track/axle placement vs tipping: needs SM-1/SM-2 with real masses
 │       (structure not yet drawn) [BENCH + MATH]
 │
