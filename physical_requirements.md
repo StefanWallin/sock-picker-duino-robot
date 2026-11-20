@@ -12,9 +12,16 @@ system + crane + carry box** in a single ⌀250 mm footprint.
 ## 2. Envelope & platform
 - **PR-1** `[user]` Body = vertical cylinder, **⌀250 mm (hard limit — print bed)**,
   height ≈ **150 mm**.
+- **PR-1b** `[A, from crossbar scenario]` A crane on top means the robot's
+  **total stowed height `H_stow` ≈ 200–230 mm** (boom parked vertical). Any
+  horizontal clearance < `H_stow` + 20 mm is a **no-go zone** (example: chair
+  crossbars at 15 cm): the robot must detect the edge and not enter —
+  it *cannot* fit, sensors included.
 - **PR-2** `[user]` Ground clearance under the chassis: **23 mm**.
-- **PR-3** `[A]` Everything (incl. crane at rest and box) fits within the ⌀250
+- **PR-3a** `[A]` Everything (incl. crane at rest and box) fits within the ⌀250 mm
   cylinder; the crane may reach *outside* only while working. **[confirm — Q2]**
+- **PR-3b** `[user]` All electronics should fit within the ⌀250 mm cylinder and
+  be protected from mechanical interference with the crane and storage box.
 
 ## 3. Drive & chassis
 - **PR-4** `[user]` Two driven wheels, **⌀67 mm**. `[A]` differential/tank steering
@@ -24,8 +31,9 @@ system + crane + carry box** in a single ⌀250 mm footprint.
 - **PR-6** `[user]` **Battery rests low, in the rear, on top of the pivot-wheel
   housing, between the drive wheels** — doubles as counterweight against
   forward picking loads.
-- **PR-7** `[user]` Crane working/lifting zone: wedge **±60° from the front
-  centerline**.
+- **PR-7** `[user]` Crane working arc: **wish ±100°** (fallback ±60°). The
+  **200 g payload is the hard requirement** and outranks arc coverage; the final
+  arc is whatever stability/torque analysis supports at that payload.
 - **PR-8** `[user]` Drive-wheel placement tension: far forward fights nose-tilt;
   too far forward raises sideways-tip risk. Initial instinct: ~10% (≈12.5 mm)
   ahead of body centreline. To be settled by support-triangle analysis
@@ -49,10 +57,66 @@ system + crane + carry box** in a single ⌀250 mm footprint.
 ## 5. Front bumper + sensing
 - **PR-12** `[user]` Rounded **spring-loaded front crash bar** acting as the hard
   bump stop.
-- **PR-13** `[user+inv]` Bumper must actuate at least one trip sensor. On-hand
-  candidates: button switch, hit sensor, vibration shock, tilt switch.
-- **PR-14** `[user]` Front array: **2× dual ultrasonic + 1× obstacle avoidance
-  (IR)**. Side/rear sensing TBD **[Q6]**.
+- **PR-13** `[user+inv]` Bumper actuates at least one trip sensor: **hall +
+  magnet** (contactless, recommended — see MI-5) with the button switch as
+  wired-OR backup.
+- **PR-14** `[user]` Owned sensing hardware: 2× dual ultrasonic, 1× IR obstacle.
+  Sensor **requirements**: stop-before-contact across the bumper arc · cruise
+  object detection ahead · close-range soft/dark-item detection (a sock is
+  sonar- and IR-invisible — the hardest case) · fine gripper approach ranging ·
+  **negative-obstacle (stairs/cliff) detection** · **threshold crossing up to
+  the Q13 rise budget without false cliff trips**. Utilisation plan:
+  **D15 / §5b**.
+- **PR-14b** `[A]` Bumper z-band: the crash bar must cover the touchable
+  silhouette, roughly **z 10–150 mm**, so nothing at body height slides under
+  it.
+
+### 5b. Sensor plan (D15 — proposal; owned modules only)
+| Module | Mount | Job |
+|---|---|---|
+| Stereo sonar **board A** (parallel pair, unsplitable) | Body **front**, **level (0° tilt)**, height 60–80 mm | Vertical surfaces (walls/legs/boxes) at cruise ranges **+ overhead crossbars**: a 15 cm crossbar enters the level beam cone from ≈30 cm out ⇒ stop before entering. At ≥25 cm the cone spans z ≈ 0–150 mm — the whole mid-band between floor and body height |
+| Stereo sonar **board B** (same type) | Body **rear**, 10–15° downtilt | Reversing safety + floor/step awareness behind |
+| IR obstacle module | Body front centre, low (~30 mm) | Owns z 0–50 mm inside ~30 cm; backstop for dark/soft items sonar misses |
+| **Downward IR reflectance ×2** (channels of the line-tracking module or spare obstacle modules, per kit inventory) | Nose, left + right, aimed at the floor ~5–10 cm ahead | **Cliff/stair vote (FLOOR-1..3)** — floor-present check |
+| Bumper trip (hall + magnet / button) | Crash bar, MI-5 | Contact truth for z 10–150 mm — always wired as a stop |
+| Crane-top **whisker** + tilt/vibration sensor | Highest point of the stowed crane | Contact last-resort against anything above the body (crossbars above beam cone included) |
+| *(v2, owned)* TCS3200 + LDR pair | Gripper/turret | Sock-vs-floor discrimination at hover (sonar can't see cloth) |
+
+**Z-coverage ladder (floor → above body):** downward IR pair (floor presence
+at the nose) → IR obstacle low (z 0–50 ≤ 30 cm) → level sonar cone (z 0–150 at
+≥25–30 cm) → bumper (z 10–150, contact) → crane whisker (above body).
+Residual gap: ≤4 cm items at 15–30 cm range, grazing-weak echo — that height
+class is usually the *target* (sock), not an obstacle; handled by pick logic.
+
+**Floor rules (FLOOR-1..3):**
+- **FLOOR-1 cliff vote**: floor-missing on **both** down channels (>50 ms)
+  **and** level-sonar range jumped out ⇒ stop, reverse, mark the edge. Rationale:
+  a sock or shadow can blind one channel, never both; wide stairs blind both.
+- **FLOOR-2 threshold climb**: floor *present and closer* (stronger reflectance)
+  never trips FLOOR-1 ⇒ climbing stays enabled up to the Q13 rise budget
+  (25–35 tuned / 40–50 stretch).
+- **FLOOR-3 single-channel loss** = not a cliff: log, slow, continue.
+
+**Clearance & rotation rules (CEIL + ROT):**
+- **CEIL-1** `H_stow` (PR-1b) is a tracked design constraint; the crane is
+  designed so the stowed pose is as **short and narrow** as possible.
+- **CEIL-2 ceiling state machine**: `UNKNOWN → LEVEL-SCAN → CLEAR / LOW`.
+  `LOW` = any level-beam target above the body height, whisker trip, or
+  unverified space. In `LOW`: crane motion, in-place rotation and forward
+  entry are **locked**; only straight reverse-out is allowed. `CLEAR` requires
+  a verified level scan plus the 360° ring check below.
+- **CEIL-3** Recovery if already under low furniture: crane to stowed, stop,
+  **reverse straight out** along the entry line; no rotation (the entry line
+  is the only verified corridor).
+- **ROT-1..3 (in free space ≥ `H_stow`+20)**: crane stowed; rotate in ≤15°
+  segments with both boards reporting the ring clear (front beam leads, rear
+  beam mirrors ⇒ CW/CCW symmetric); turret dump-swing only inside a verified
+  dump-clearance zone (⌀ ≥ ~350 mm at crane heights).
+- Forward light: **not needed in v1** — every v1 sensor is active (ultrasonic,
+  own-IR, contact); no IR flood either (saturates the obstacle module). v2
+  colour reading uses the TCS3200's on-board white LEDs; the owned LED module
+  is an optional MKR-driven status beacon only.
+- Pings are staggered (A then B) to avoid sonar crosstalk.
 
 ## 6. Crane actuation inventory (hard constraints)
 - **PR-15** `[user]` **4× SG90** in total; **one is dedicated to turret slew**.
@@ -130,6 +194,15 @@ system + crane + carry box** in a single ⌀250 mm footprint.
   under full 200 g reach. Trade-off: ~2–3× torque for ~2–3× slower slew
   (still ≥200°/s), plus ~0.5–1° tooth backlash — acceptable at sock-picking
   accuracy. Decision deferred to mechanics phase with real friction data.
+- **D15 (proposed)** — Sensor plan, table in §5b with **z-coverage ladder**,
+  **floor rules FLOOR-1..3** (two-channel cliff vote ≠ sock shadow; thresholds
+  never trip it) and **clearance gates**: sonar board A front **level**
+  (vertical surfaces + overhead crossbars from ≈30 cm; covers z 0–150 at ≥25 cm),
+  board B rear downtilted (reversing + floor), nose-down IR pair for cliffs,
+  IR backstop low, bumper = contact truth z 10–150, **crane-top whisker +
+  vibration = contact last-resort**; ceiling state machine locks crane/rotation
+  under low furniture (PR-1b no-go zones); missing echo ⇒ obstacle; staggered
+  pings. v2: TCS3200 + LDR for sock discrimination. *(pending user acceptance)*
 - **D14 (chassis provenance)** — the Roomba-style chassis is designed **from
   scratch**; *no* moulded/machined part is reused (no acrylic, no kit plate).
   Only **components** are carried over: 2× TT motors, 2× ⌀67 wheels (yellow
@@ -186,7 +259,9 @@ Mission: roam → find sock/toy → pick (≤200 g, ±60° front wedge) → stor
 │   └─ Track/axle placement vs tipping: needs SM-1/SM-2 with real masses
 │       (structure not yet drawn) [BENCH + MATH]
 │
-├─ CRANE (4× SG90, one = slew; payload 200 g; over-reach 70–80 mm)
+├─ CRANE (4× SG90, one = slew)
+│   ├─ PRIORITY (PR-7 revised): 200 g payload is HARD; working arc is the wish
+│   │   (±100° target, ±60° fallback, over-reach 70–80 mm)
 │   ├─ Torque at shoulder with 200 g payload ⇒ torque multiplier required
 │   │   → mechanisms phase decides: crank+link / counterbalance / gearing /
 │   │     DC-motor winch reserve (D13-style option list) [MECHANICS]
@@ -198,11 +273,18 @@ Mission: roam → find sock/toy → pick (≤200 g, ±60° front wedge) → stor
 │   ├─ Crane dumps from above into body-fixed rear compartment ✓
 │   └─ Lid/opening/capacity fine-tuning [LAYOUT]
 │
-├─ SENSING (front ±40° bumper + 2× dual ultrasonic + IR obstacle)
-│   ├─ Bumper mechanics: linear slide + early trip + over-travel ✓ MI-5
-│   ├─ Ultrasonic mounting height/tilt (old zip-tie height too low for
-│   │   reliable floor echo) [LAYOUT]
-│   └─ Side/rear coverage [OPEN — Q6]
+├─ SENSING (strategy D15 proposal, §5b — owned modules only)
+│   ├─ Bumper = contact truth, z 10–150 mm (MI-5 + PR-14b) ✓
+│   ├─ Sonar board A front, LEVEL: walls/legs + 15 cm crossbars from ≈30 cm;
+│   │   cone covers z 0–150 at ≥25 cm (the whole mid-band) ✓
+│   ├─ Sonar board B rear, downtilt: reversing + floor/step awareness ✓
+│   ├─ Nose-down IR pair: cliff vote (both dark + sonar jump = stair);
+│   │   thresholds never trip it (FLOOR-1..3, Q13 budget) ✓
+│   ├─ Ceiling state machine (CEIL-2): LOW locks crane + rotation, reverse-out
+│   │   only (PR-1b no-go zones under H_stow) ✓
+│   ├─ Crane-top whisker + vibration = contact last-resort ✓
+│   ├─ Close-range backstop: IR obstacle module for sonar-invisible items ✓
+│   └─ v2 discrimination: TCS3200 + LDR pair at hover [PROPOSED]
 │
 ├─ POWER (D8 rails) — QC-2 above; add: total current budget check
 │   (2 drive stalls ~1.5–2 A? measure TT stall @5V-equivalent) [BENCH]
@@ -229,7 +311,8 @@ leaves to settle before mechanics:
       voltage + voltage drop) → finalises PR-32 PWM cap.
 - [ ] **QC-2** — 4×AA chemistry for the servo rail: NiMH (4.8–5.2 V) preferred;
       fresh alkalines peak ≈6.4 V (above SG90 nominal, below its absolute max).
-- [ ] **Q6** — side/rear sensor coverage (which spare modules, if any).
+- [ ] **Q6** — are D15's safe-rotation rules (ROT-1..3) and front/rear sonar
+      coverage enough, or does the robot need more side/rear sensing?
 - [ ] **Q7** — docking/charging: confirmed out of scope for v1?
 - [ ] **QC-TT (calipers)** — TT gearbox: L×W×H, shaft-to-face distances, mount
       hole positions (cross-check MI-1).

@@ -48,6 +48,10 @@ completes.
 - Tick off completed goals in the README checklist, in plain markdown.
 - Add new decisions/facts (measurements, purchases, serial protocol changes) to the
   README instead of chat-only statements. If it's not in the README, it didn't happen.
+- When revising documentation, **rephrase for clarity and concision instead of
+  appending**: requirement text states the *current truth*; revision history and
+  "why it changed" belong only in the decisions log. Never leave old+new versions
+  of the same requirement side by side.
 - Keep `AGENTS.md` itself updated if a tool/command changes.
 
 ## Commit style

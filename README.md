@@ -14,15 +14,16 @@ already-owned SG90 micro servos — replicating a Volvo material handler
 - [x] Phase 0 — capture all project knowledge (ChatGPT threads, inventory, decisions) into this README
 - [x] Agent instructions (`AGENTS.md`)
 - [x] CAD toolchain ready — FreeCAD 1.1.1 headless (`freecadcmd`), parametric Python scripts
-- [x] **Step 2 — Rotator base + servo housing STLs** (`stl/base_platter.stl`, `stl/turret_deck.stl`, `stl/catch_basket.stl`; battery dock, basket, buzzer mount, 3-wire pass-throughs)
-- [ ] Print & fit-test the three printed parts (user, with real SG90 + battery + buzzer module)
-- [ ] Step 3 — mast + boom with fishing-line pulley winch STLs
-- [ ] Step 4 — gripper (clamshell) STL driven by fishing line / servo
-- [ ] Step 5 — prototype kinematics library for the arm on the Nano
-- [ ] Step 6 — combine digger kinematics + car movement under MKR WiFi 1010 control (web UI)
-- [ ] Step 7 — integrate onto the car base (weight, power, centre of gravity)
-- [ ] Step 8 — sock detection experiments (ultrasonic + TCS3200 colour + IR)
-- [ ] Stretch — revisit 18-servo folding sphere bot with the lessons learned
+- [ ] Step 1 — Collect requirements and inventory (physical constraints, available components, desired capabilities)
+- [ ] Step 2 — Sketch out roomba body and crane parts as STL files
+- [ ] Step 3 — Visual design review by user
+- [ ] Step 4 — Mathematical and physical analysis (stability, reach, payload)
+- [ ] Step 5 — Design revision (repeat steps 2–4 as needed)
+- [ ] Step 6 — PLA prototype fit-tests on mini-parts (motors, servos, and other crucial components)
+- [ ] Step 7 — Revise from test and final prototype STL design
+- [ ] Step 8 — Full assembly test
+- [ ] Step 9a — Programming the crane control logic for the robot
+- [ ] Step 9b — Programming the navigation and control logic for the robot
 
 ## Quick facts
 
