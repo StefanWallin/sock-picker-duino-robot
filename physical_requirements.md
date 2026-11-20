@@ -83,25 +83,60 @@ system + crane + carry box** in a single ⌀250 mm footprint.
   power bank (5 V) reserved for logic. *(Q8)*
 - **D6** — Rear box: **small — ~3–5 socks** (plus maybe one small toy).
   *(Q5)*
+- **D8 (proposed — power architecture, zero purchases)** *(from Q8 + car photo)*:
+  **2×18650 Li-ion → drive motors + Nano VIN** (7.4 V is inside Nano VIN spec,
+  out of SG90 spec); **the ZYC0055 4×AA holder → servo rail** (4×AA = 6.0 V
+  nominal, dead-center of the SG90's 4.8–6 V spec; SG90 stall ~0.7 A × 2 =
+  1.4 A < 4×AA realistic pulse capability for short stalls); **power bank
+  (5 V USB) → MKR 1010 only**. Common GND across all three rails.
+- **D9 (proposed — slew architecture, answers "motors under the ring")**:
+  the **slew servo stays fixed to the base**, driving the turret through the
+  horn/deck coupling already moulded into the deck centre — its wires never
+  twist. The crane servos (boom, grab, future stick) **mount low on the turret
+  and rotate with it** (low CG, your instinct), and their wires cross the
+  rotating joint once through the ⌀10 pass-through; twist stays small because
+  the **working arc is ≤200°** and we unwind during the rear dump swing.
+  Rationale against mounting ALL motors incl. slew under the ring: their wires
+  would still cross the joint, and a rotating link for the slew servo adds
+  precision loss — the horn-under-deck path is simpler and already printed.
+- **D10 (proposed — bumper spring)**: use the **3D-printed accordion spring**
+  (`spring.jpeg`) as the crash-bar spring: geometry is a free design parameter
+  (zigzag depth/count/wall tune stiffness at the bench); pairs with the button
+  switch module as the trip sensor.
+- **D11 (hardware identification — from photos)**: drive motors are **standard
+  yellow TT gearbox motors** (typ. gearbox ~66 × 22.5 × 18 mm, twin ⌀3 plastic
+  output shafts, ~1:48 gearing class, 3–6 V — *verify against calipers*), as
+  in `car.webp`: acrylic ZYC0055 platform, 4×AA holder amidships, dome
+  universal wheel on a 4-screw flange at the rear.
 
 ## 10. Still open (do not design before these close)
-- [ ] **Q10 (new)** Servo power rail: SG90s want 4.8–6 V, but the 2×18650 pack
-      is 7.4 V nominal (out of spec for SG90) and the power bank's 5 V/2 A line
-      is shared with the MKR. Options on hand: share the bank (brownout risk on
-      double stall), an AA×4 holder if one exists in the drawers, or an approved
-      buck converter purchase (needs user sign-off).
-- [ ] **Q11 (new, interpretation)** Slew-arc semantics: does "not more than 200°
-      for reaching" mean a ±100° window around the front centerline (dump =
-      slew the long way around to the rear), and wires twist/unwind without a
-      slip ring? *(provisional: yes)*
-- [ ] **Q12 (new, user asked assistant)** Internal architecture: ballast-filled
-      body vs U-notch front — assistant recommendation recorded below (D7),
-      pending user acceptance.
-- [ ] **Q9 (measurement)** Track width between 67 mm drive-wheel contact
-      patches, wheel hub type, caster housing diameter/position — needed for
-      the support-triangle math (SM-1/SM-2).
+- [ ] **Q10 → resolved as D8** pending one user check: does the 4×AA holder from
+      the ZYC0055 actually exist and can it be spared from the old car?
+- [ ] **Q11 → resolved as D9** (≤200° working arc, slew servo fixed to base,
+      crane servos rotate on the turret, unwind discipline; no slip ring, no
+      true-360 servo mounting gymnastics).
+- [ ] **Q12 → resolved as D7/D8** (hollow shell + rear-low ballast pockets,
+      not a ballast-filled body, no U-notch) — awaiting user acceptance.
+- [ ] **Q9 (measurements, how-to below — ruler only):**
+  1. **Track width** = distance between the two wheels' ground-contact centres.
+     Easiest: stand the car on paper, mark both contact patches, measure
+     centre-to-centre. This sets the sideways-tip defence (support triangle).
+  2. **Wheel hub & motor mounts**: how the 67 mm wheel grips the TT motor's
+     ⌀3 shaft (press-on hub? screw? D-flat?), and how the TT motors fasten to
+     the acrylic (bracket? double-sticky? the kit's plastic clamps?) — we must
+     reprint equivalents on the new chassis.
+  3. **Caster dome**: outer diameter, total height (should be ≈20 mm per your
+     spec), the 4-screw flange spacing, and position from the rear edge.
+  4. **18650 holder** outer dimensions (for the bay): if 2×18650 holder is not
+     on hand, note that too.
+  5. **Front bumper span**: how wide the crash bar should wrap around the front
+     (chord across the ⌀250 at the front), and the free travel your printed
+     accordion spring has when compressed by ~5 mm.
 - [ ] **Q6** Side/rear sensor coverage (which spare modules).
 - [ ] **Q7** Docking/charging: out of scope for v1?
+- [ ] **QC-TT (calipers, when built)** confirm TT gearbox dims: length, width,
+      height, shaft-to-mount-face distances, and the two rear-mount hole
+      positions on the gearbox front face.
 
 ## 11. Assistant recommendation on internal architecture (answering Q12)
 Neither "fill the entire body with ballast" nor a U-shaped front notch is my
