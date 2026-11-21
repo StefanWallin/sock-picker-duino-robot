@@ -10,8 +10,9 @@ crane and stores them onboard — the car-crane contraption. One machine: **driv
 system + crane + carry box** in a single ⌀250 mm footprint.
 
 ## 2. Envelope & platform
-- **PR-1** `[user]` Body = vertical cylinder, **⌀250 mm (hard limit — print bed)**,
-  height ≈ **150 mm**.
+- **PR-1** `[user, height revised in Step-3 pre-review]` Body = vertical
+  cylinder, **⌀250 mm (hard limit — print bed)**, height **≈ 120 mm** (was 150 —
+  "15 cm is a bit high").
 - **PR-1b** `[A, from crossbar scenario]` A crane on top means the robot's
   **total stowed height `H_stow` ≈ 200–230 mm** (boom parked vertical). Any
   horizontal clearance < `H_stow` + 20 mm is a **no-go zone** (example: chair
@@ -120,6 +121,12 @@ class is usually the *target* (sock), not an obstacle; handled by pick logic.
 
 ## 6. Crane actuation inventory (hard constraints)
 - **PR-15** `[user]` **4× SG90** in total; **one is dedicated to turret slew**.
+  **Line hardware expected (user review)**: where servos pull wires, the design
+  carries **0.5 mm fishing-line winch drums on servo horns + idler pulleys +
+  line channels** (Volvo-handler concept). Physics note (earlier wall-check):
+  a *direct* drum-line boom drive was ruled infeasible for the 200 g shoulder —
+  drums/pulleys therefore appear as **gripper short-stroke drive** and the
+  **counterweight-drum option (PR-19)**, never as the primary shoulder drive.
 - **PR-16** `[user]` **2× DC motors** available if reeling-in heavy items needs them.
 - **PR-17** `[user]` Weak-motor mitigations explicitly on the table: **ballast,
   counterbalance, elevated pivot points, pulley & tackle**.
@@ -256,7 +263,9 @@ class is usually the *target* (sock), not an obstacle; handled by pick logic.
 - **MI-4 2×18650 holder** `[measured]`: **92 × 43 × 22 mm**; mount holes square
   pattern **39 × 30 mm**, **21 mm from the short side opposite the
   cable/switch end**; cells load from the cable end. Bay must allow quick
-  cell swap.
+  cell swap. **Battery access (user review): no-tool bottom drop-hatch**
+  (tab-latched door in the hull floor under the battery stack) — cells and
+  the power bank swap without any screws.
 - **MI-5 Bumper** `[user decision]`: **straight linear push** (no pivot),
   covering **±40° from centreline (80° arc ⇒ chord ≈ 161 mm at the ⌀250
   edge)**; travel **5–8 mm**.
@@ -266,7 +275,11 @@ class is usually the *target* (sock), not an obstacle; handled by pick logic.
   - *Trip sensor candidates (on hand)*: hall effect/linear hall with a small
     magnet on the bar (contactless, no plunger wear — recommended), button
     switch module as wired-OR backup.
-  - Bar/skin printed in TPU (D12); travel guided by printed rails.
+  - Bar/skin printed in TPU (D12); **mounting (user review): the bar is
+    curved on the ⌀250 line (outer face flush with the silhouette), spans the
+    full 80° arc, and slides 5–8 mm *inward* through C-channels moulded into
+    the lower body — no external rails, no screws**; hall magnet rides on the
+    bar's inner face.
 
 ## 10. Consistency scan & decision tree
 

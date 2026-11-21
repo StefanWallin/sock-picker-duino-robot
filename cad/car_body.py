@@ -1,21 +1,22 @@
-"""HooverBot step 2 (car phase) — Roomba-style body shell sketches.
+"""HooverBot step 2 (car phase) — body shell v2, built on the user's
+stl/body_lower_idea.stl intent (see Feature map in README.md).
 
-Visual-review sketch: rough parametric parts for Step 3 user review.
 Rebuild:
     /Applications/FreeCAD.app/Contents/Resources/bin/freecadcmd cad/car_body.py
 
-Exports (mm, Z-up, origin = floor centre, robot faces +Y):
-    stl/body_lower.stl   hull band z 23..125: wheel wells, motor cradles (MI-1),
-                         battery stack bays (MI-4 + power-bank tier), ballast
-                         pockets, caster pods (MI-3), sensor pads, flange ring
-    stl/body_upper.stl   hull band z 125..150 + top rim: bumper guide ribs,
-                         hall pocket, rear storage tub partition
-    stl/bumper_bar.stl   TPU crash bar face, +/-40 deg arc (MI-5)
+Exports (mm, Z-up, origin = floor centre, front = +Y):
+    stl/body_shell.stl   one-piece hull: floor, walls (top 120), internal
+                         wheel-well space (wheels parallel at x = +/-95),
+                         motor brackets, battery stack (MI-4 tray + bank
+                         tier), ballast pockets, hatch opening + snap lip,
+                         bumper slide channels, sensor windows, casters,
+                         slew pedestal seat, perch shelf for electronics
+    stl/hatch_door.stl   tool-free battery hatch door (snap tabs)
+    stl/bumper_bar.stl   TPU 80-arc bumper, flush with the D250 line, slides
+                         inward; sensor apertures + hall magnet pocket
 
-Sketch-level simplifications (review in Step 3, revise in Step 5/7):
-    - sensor pads are flat standoff pads with placeholder hole patterns
-    - fastener holes are plain self-tap clearances, no threads
-    - TODO(measure) dims flagged in the parameter block
+TODO(measure): WHEEL_W (tyre width), BANK dims (est 148 x 68 x 17),
+AA_HOLDER footprint if the 4xAA pack should also live in a tray.
 """
 
 import math
@@ -26,105 +27,98 @@ import Part
 import MeshPart
 import Mesh
 
+FONT = "/System/Library/Fonts/supplemental/Arial.ttf"
 
 # --------------------------------------------------------------------------
-# parameters — envelope, structure (all mm, Z-up, front = +Y)
+# parameters
 # --------------------------------------------------------------------------
-BED = 250.0                 # print volume limit (asserted per part)
-R_OUT = 125.0               # PR-1 hard silhouette
-R_IN = 122.0                # wall inner radius
-Z_FLOOR = 23.0              # PR-2 ground clearance
-FLOOR_T = 3.0               # floor plate thickness (z 23..26)
-Z_TOP = 150.0               # hull top (body ~=150 incl. clearance band)
-Z_SPLIT = 125.0             # lower/upper section joint
-CLEAR = 0.7                 # drop-in fit clearance
-HOLE_D = 3.2                # self-tap clearance hole
-FLG_Z0, FLG_Z1 = 121.0, Z_SPLIT          # section flange ring (bolts inside silhouette)
-FLG_R0 = 119.0               # flange inner radius
-FLG_BOLT_ANG = (30.0, 150.0, 210.0, 330.0)
+BED = 250.0
+R_OUT = 125.0               # PR-1 silhouette (hard)
+R_IN = 122.0                # wall 3 mm
+Z_FLOOR = 23.0              # PR-2 clearance; floor slab z 23..26
+FLOOR_T = 3.0
+Z_TOP = 120.0               # PR-1 rev: hull top 120 (was 150)
+Z_SPLIT = 125.0             # unused (single shell) kept for crane refs
+CLEAR = 0.7
+HOLE_D = 3.2
 
-# wheels + drive (MI-1/MI-2; TT motor typical dims per D11, verify w/ calipers)
+# wheels: PARALLEL pair, fully recessed inside the well space (user idea)
 WHEEL_R = 33.5
-AXLE_Z = WHEEL_R            # wheels touch the floor
-WHEEL_W = 26.0              # TODO(measure) tyre width
-WHEEL_RC = 108.0            # wheel-centre radius; outer face ~121 (MI-2)
-WELL_HALF_DEG = 19.0        # wall opening half-angle around the +-X axis
-WELL_Z1 = 67.0              # wheel top 67 + margin
-MOTOR_L = 66.0              # TT gearbox+can length, wheel hub inward
+AXLE_Z = WHEEL_R
+WHEEL_W = 26.0              # TODO(measure)
+WHEEL_RC = 95.0             # wheel centre radius (outer face ~108: in-well)
+WELL_X0 = 73.0              # interior kept clear x >= 73 on both sides
+MOTOR_L = 66.0              # TT gearbox+can, hub inward
 MOTOR_W = 22.5
 MOTOR_H = 18.0
-MI1_C2C = 17.0              # MI-1 screw pair, centre-to-centre
-MI1_OFF = 19.0              # MI-1 screw-line offset from axle centreline
+MI1_C2C = 17.0
+MI1_OFF = 19.0
 MI1_HOLE = 3.0
 
-# batteries (PR-6/D16 rear-low stack)
-BAY1_W = 43.0 + 2.0         # MI-4 holder 92 x 43 x 22 + clearance
-BAY1_L = 92.0 + 2.0
-BAY1_H = 22.0
-MI4_SQ_X = 39.0             # MI-4 hole square pattern
-MI4_SQ_Y = 30.0
-MI4_FROM_END = 21.0         # from the non-cable short side
-BANK_W = 68.0               # Anslut 10000 (EST — TODO measure ~148x68x17)
-BANK_L = 148.0
-BANK_H = 17.0
+# battery stack: 18650 tray (MI-4) between the wells + bank tier above
+TRAY_X0, TRAY_X1 = 13.5, 58.5      # 45 wide segment between wells
+TRAY_Y0, TRAY_Y1 = -47.0, 45.0     # 92 long (MI-4)
+TRAY_H = 22.0                      # holder height
+MI4_SQ_X, MI4_SQ_Y = 39.0, 30.0
+MI4_FROM_END = 21.0                # from the non-cable short side (y=-47)
+BANK_W, BANK_L, BANK_H = 68.0, 148.0, 17.0
+BANK_Y1 = 34.0                     # bank sits across X: x -59..59
 RAIL_T = 2.0
-RAIL_H = 10.0               # 18650 tray rail height
-TIER2_Z0 = Z_FLOOR + FLOOR_T + BAY1_H
-TIER2_Z1 = TIER2_Z0 + BANK_H + RAIL_T + 2.0
+TK2_Z0 = Z_FLOOR + FLOOR_T + TRAY_H       # 48 bank tier floor
+TK2_Z1 = TK2_Z0 + BANK_H + RAIL_T + 2.0   # 69 bank tier top
 
-# ballast pockets (D16): open-top boxes fused to the rear inner wall
-POCKETS = [                 # (x0, x1, y0, y1, z1)
-    (24.0, 66.0, -104.0, -76.0, 46.0),
-    (-66.0, -24.0, -104.0, -76.0, 46.0),
-    (70.0, 106.0, -70.0, -44.0, 64.0),
-    (-106.0, -70.0, -70.0, -44.0, 64.0),
-]
+# tool-free hatch (user review): opening under the 18650 tray
+HATCH_X0, HATCH_X1 = 12.5, 59.5
+HATCH_Y0, HATCH_Y1 = -46.0, 46.0
 
-# caster pods (MI-3): plate 48 x 33, screws 39 c-c, dome ~D26-30, h ~20
-CAST_PL_X = 48.0
-CAST_PL_Y = 33.0
-CAST_CC = 39.0
-CAST_HOLE = 32.0            # floor hole the dome drops through
-CASTER_Y = (-100.0, 100.0)  # rear + front pod
-POD_DROP = 3.0              # pad hangs below the 23 mm line -> dome touches down
+# ballast pockets (D16) along the rear inner wall
+POCKETS = [(24.0, 66.0, -104.0, -76.0, 46.0),
+           (-66.0, -24.0, -104.0, -76.0, 46.0)]
 
-# rear storage tub (crane dumps from above; bin = y < 18)
-PART_Y = 18.0
-PART_X = 60.0               # side segments clear the slew pedestal (x <= 24)
-PART_T = 2.5
-PART_Z1 = 121.0
+# casters (MI-3)
+CAST_PL_X, CAST_PL_Y, CAST_CC = 48.0, 33.0, 39.0
+CASTER_Y = (-100.0, 100.0)
+POD_DROP = 3.0
 
-# sensors (D14) + bumper (MI-5)
-SONAR_ANG = 20.0            # pad half-angle about front (+Y)
-SONAR_R0, SONAR_R1 = R_OUT, R_OUT + 4.0
-SONAR_Z0, SONAR_Z1 = 58.0, 64.0
-IRS_ANG = 8.0
-IRS_Z0, IRS_Z1 = 30.0, 36.0
-CLIFF_ANG = (74.0, 80.0, 100.0, 106.0)
-CLIFF_Z0, CLIFF_Z1 = 24.0, 33.0
-HALL_POCKET = (-4.0, 4.0, 112.0, 118.0, 88.0, 94.0)
-RAIL_ANG0, RAIL_ANG1 = 18.0, 36.0   # bumper guide rib angles about +Y
-RAIL_Z0, RAIL_Z1 = 55.0, 115.0
-BUMP_R0, BUMP_R1 = 126.5, 131.5     # TPU bar shell
-BUMP_HALF = 40.0                    # MI-5 arc
-BUMP_Z0, BUMP_Z1 = Z_FLOOR, Z_TOP
-MAG_POCKET = (-4.0, 4.0, -6.0, 0.0, 88.0, 94.0)  # local coords inside the bar
+# perch shelf for electronics (front quadrant, above bumper channel zone)
+PERCH_Y0, PERCH_Y1 = 55.0, 112.0
+PERCH_Z0, PERCH_Z1 = 70.0, 73.0
 
-# slew pedestal seat (part built in crane_concept.py; provisions here)
-SLEW_FEET = (17.0, 10.0)    # foot half-sizes: x=+-17, y=35..55
-SLEW_WIRE = (0.0, 54.0, 5.0)  # D10 wire bore x, y, r
+# slew pedestal seat (crane_concept.py)
+SLEW_HOLES = ((17.0, 35.0), (17.0, 55.0), (-17.0, 35.0), (-17.0, 55.0))
+SLEW_WIRE = (0.0, 54.0, 6.0)
+
+# bumper (MI-5 rev): flush D250 arc, slides inward, internal C-channels
+BUMP_ZN, BUMP_ZF = 27.0, 118.0     # bar face z band
+BUMP_R0, BUMP_R1 = 122.5, 125.2
+BUMP_HALF = 40.0
+FLG1_Z0, FLG1_Z1 = 33.0, 35.5      # inward flanges (slide rails)
+FLG2_Z0, FLG2_Z1 = 100.0, 102.5
+CH_LEDGE_C = 32.5                  # channel ledge centre z
+CH_LIP = (99.0, 104.0)             # top lip z that traps the upper flange
+SONAR_ANG = 20.0                   # board aim, windows through the TPU bar
+HALL_W = 90.0                      # hall window centre z on the bar
+
+# sensor windows (cut through shell behind the bar apertures)
+WIN_SONAR = ((52.0, 72.0), (8.0, 32.0), (148.0, 172.0))   # (z0,z1), aims L/R
+WIN_IR = (28.0, 38.0, 3.0)                                # z0,z1, half-ang
+WIN_CLIFF = ((24.0, 36.0), 26.0, 154.0)  # z band, half-ang, centres 64/154?? 
+
+# rear storage partition (dump tub = y < 18)
+PART_Y, PART_X, PART_T, PART_Z1 = 18.0, 60.0, 2.5, 110.0
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "stl")
+LABELS = []                        # (text, x, y, z, axis, mirror)
 
 # --------------------------------------------------------------------------
-# helpers (same pattern as cad/rotator_base.py)
+# helpers
 # --------------------------------------------------------------------------
 V = App.Vector
 ZDIR = V(0, 0, 1)
+XDIR = V(1, 0, 0)
 
 
 def box(x0, x1, y0, y1, z0, z1):
-    """Axis-aligned box; each axis is normalised so x0<=x1 etc. hold."""
     return Part.makeBox(abs(x1 - x0), abs(y1 - y0), abs(z1 - z0),
                         V(min(x0, x1), min(y0, y1), min(z0, z1)))
 
@@ -133,18 +127,23 @@ def cyl(x, y, r, z0, z1):
     return Part.makeCylinder(r, z1 - z0, V(x, y, z0), ZDIR)
 
 
-def cone(x, y, r_bot, r_top, z0, z1):
-    return Part.makeCone(r_bot, r_top, z1 - z0, V(x, y, z0), ZDIR)
+def cylx(y, z, r, x0, x1):
+    d = XDIR if x1 > x0 else V(-1, 0, 0)
+    return Part.makeCylinder(r, abs(x1 - x0), V(min(x0, x1), y, z), d)
 
 
-def sector_ring(r0, r1, z0, z1, ang0, ang1):
-    """Arc piece of a ring; angles in deg CCW from +X, trimmed 1 deg overlap."""
+def cone(x, y, r0, r1, z0, z1):
+    return Part.makeCone(r0, r1, z1 - z0, V(x, y, z0), ZDIR)
+
+
+def sector_ring(r0, r1, z0, z1, a0, a1):
+    """Arc of a ring, CCW from +X, tangency-safe trims."""
     outer = Part.makeCylinder(r1, z1 - z0, V(0, 0, z0), ZDIR,
-                              math.radians(ang1 - ang0))
-    outer.rotate(V(0, 0, 0), ZDIR, ang0)
+                              math.radians(a1 - a0))
+    outer.rotate(V(0, 0, 0), ZDIR, a0)
     inner = Part.makeCylinder(r0, z1 - z0 + 4, V(0, 0, z0 - 2), ZDIR,
-                              math.radians(ang1 - ang0 + 4))
-    inner.rotate(V(0, 0, 0), ZDIR, ang0 - 2)
+                              math.radians(a1 - a0 + 4))
+    inner.rotate(V(0, 0, 0), ZDIR, a0 - 2)
     return outer.cut(inner)
 
 
@@ -163,241 +162,185 @@ def cut_all(shape, tools):
 
 def export(shape, name):
     path = os.path.normpath(os.path.join(OUT, name))
-    print("%-18s solids=%d shells=%d valid=%s"
-          % (name, len(shape.Solids), len(shape.Shells), shape.isValid()))
-    mesh = None
-    tried = []
-    for maker in (
-        lambda: MeshPart.meshFromShape(Shape=shape, LinearDeflection=0.25,
-                                       AngularDeflection=0.5, Relative=False),
-        lambda: MeshPart.meshFromShape(Shape=shape, Fineness=2, SecondOrder=0,
-                                       Optimize=1, AllowQuad=0),
-        lambda: mesh_from_faces(shape),
-    ):
-        try:
-            m = maker()
-            tried.append("try")
-        except Exception as exc:                     # noqa: BLE001
-            tried.append("skip(%s)" % exc)
-            continue
-        if m.isSolid():
-            mesh = m
-            break
-        for op in ("removeDuplicatedPoints", "removeDuplicatedFacets",
-                   "removeDegeneratedFacets", "harmonize",
-                   "removeNonManifolds", "removeFoldsOnSurface",
-                   "fillupMeshHoles", "removeDuplicatedFacets"):
-            fn = getattr(m, op, None)
-            if fn is None:
-                continue
-            try:
-                fn()
-            except TypeError:
-                try:
-                    fn(1.0)
-                except Exception:                        # noqa: BLE001
-                    pass
-            except Exception:                            # noqa: BLE001
-                pass
-        if m.isSolid():
-            mesh = m
-            tried.append("healed")
-            break
-        mesh = m
-    healed = mesh is not None and "healed" in tried
-    ok = (mesh is not None and bool(mesh.isSolid()) and shape.isValid()
-          and max(mesh.BoundBox.XLength, mesh.BoundBox.YLength,
-                  mesh.BoundBox.ZLength) <= BED)
+    mesh = MeshPart.meshFromShape(Shape=shape, LinearDeflection=0.25,
+                                  AngularDeflection=0.5, Relative=False)
     mesh.write(path)
     chk = Mesh.Mesh(path)
     bb = chk.BoundBox
-    print("%-18s bbox=(%.1f x %.1f x %.1f) mm  volume=%.0f mm3  solid=%s  [%s]"
-          % (name, bb.XLength, bb.YLength, bb.ZLength, shape.Volume,
-             chk.isSolid(), ",".join(tried)))
-    if healed and not chk.isSolid():
-        print("WARNING: %s shipped with a *healed* sketch-quality mesh; "
-              "regenerate in Step 5 after measured dims." % name)
-    assert ok and (chk.isSolid() or healed), \
-        name + " failed validation (solid/watertight/bed)!"
+    ok = (bool(chk.isSolid()) and shape.isValid()
+          and max(bb.XLength, bb.YLength, bb.ZLength) <= BED)
+    print("%-18s bbox=(%.1f x %.1f x %.1f) mm  volume=%.0f mm3  solid=%s"
+          % (name, bb.XLength, bb.YLength, bb.ZLength, shape.Volume, ok))
+    assert ok, name + " failed validation (solid/watertight/bed)!"
     return path
 
 
-def mesh_from_faces(shape):
-    """Last-resort mesher: tessellate each face, stitch a mesh manually."""
-    verts, facets = shape.tessellate(0.25)
-    m = Mesh.Mesh()
-    for f in facets:
-        m.addFacet(verts[f[0]], verts[f[1]], verts[f[2]])
-    return m
+def apply_labels(shape, depth=0.8, size=4.5):
+    """Fuse raised text. Entries: (text, x, y, z, axis, mirror).
+    axis 'z' = flat on the floor, 'y' = on a wall facing +Y,
+    'x' = facing +X."""
+    for (text, x, y, z, axis, mirror) in LABELS:
+        wires = Part.makeWireString(text, FONT, size)
+        solids = []
+        for grp in wires:
+            for w in grp:
+                try:
+                    f = Part.Face([w])
+                    solids.append(f.extrude(V(0, 0, depth)))
+                except Exception:
+                    pass
+        if not solids:
+            continue
+        txt = fuse_all(solids)
+        if axis == "y":
+            txt = txt.rotate(V(0, 0, 0), XDIR, 90)
+        elif axis == "x":
+            txt = txt.rotate(V(0, 0, 0), YDIR, 90)
+        txt = txt.translate(V(x, y, z))
+        shape = shape.fuse(txt)
+    return shape
 
 
 # --------------------------------------------------------------------------
-# 1) body lower — z 23..125
+# 1) body shell (one piece) — every feature listed in the README feature map
 # --------------------------------------------------------------------------
-def build_lower():
-    zf = Z_FLOOR
-    SEAM = 45.0               # cylinder seam moved to 45 deg: no cut crosses it
+def build_shell():
+    zf, it = Z_FLOOR, FLOOR_T
     parts = [
-        cyl(0, 0, R_OUT, zf, zf + FLOOR_T).rotate(V(0, 0, 0), ZDIR, SEAM),
-        cyl(0, 0, R_OUT, zf, Z_SPLIT).rotate(V(0, 0, 0), ZDIR, SEAM).cut(
-            cyl(0, 0, R_IN, zf - 1, Z_SPLIT + 1)),
+        cyl(0, 0, 87.0, zf, zf + it),                       # central floor
+        cyl(0, 0, R_OUT, zf, Z_TOP).cut(cyl(0, 0, R_IN, zf - 1, Z_TOP + 1)),
+        cyl(0, 0, R_OUT, Z_TOP, Z_TOP + 2).cut(             # rim cap
+            cyl(0, 0, 116.0, Z_TOP - 1, Z_TOP + 3)),
     ]
-    # section flange ring on top (bolts inside the silhouette)
-    parts.append(cyl(0, 0, R_OUT, FLG_Z0, FLG_Z1).rotate(
-        V(0, 0, 0), ZDIR, SEAM).cut(
-        cyl(0, 0, FLG_R0, FLG_Z0 - 1, FLG_Z1 + 1)))
     solid = fuse_all(parts)
 
-    fuses = []
-    # 18650 tray (tier 1): perimeter rails on the floor
-    y0, y1 = -119.0, -25.0
-    fuses.append(box(-BAY1_W / 2, BAY1_W / 2, y0, y0 + RAIL_T, zf + FLOOR_T,
-                     zf + FLOOR_T + RAIL_H))
-    fuses.append(box(-BAY1_W / 2, BAY1_W / 2, y1 - RAIL_T, y1, zf + FLOOR_T,
-                     zf + FLOOR_T + RAIL_H))
+    # ---- battery stack: MI-4 tray rails + bank tier ----
+    for fy in (TRAY_Y0, TRAY_Y1 - RAIL_T):
+        solid = solid.fuse(box(TRAY_X0, TRAY_X1, fy, fy + RAIL_T,
+                               zf + it, zf + it + 10))
     for s in (1, -1):
-        fuses.append(box(s * (BAY1_W / 2 - RAIL_T), s * BAY1_W / 2,
-                         y0, y1, zf + FLOOR_T, zf + FLOOR_T + RAIL_H))
-        # power-bank tier-2: full-height side walls (stand on the floor)
-        fuses.append(box(s * (BANK_W / 2 - RAIL_T), s * BANK_W / 2,
-                         -119.0, 29.0, zf + FLOOR_T, TIER2_Z1))
-    fuses.append(box(-BANK_W / 2, BANK_W / 2, -119.0, -117.0,
-                     TIER2_Z0, TIER2_Z1))                      # tier2 back wall
-    fuses.append(box(-BANK_W / 2, BANK_W / 2, -119.0, 29.0,
-                     TIER2_Z0, TIER2_Z0 + 2.0))                # tier2 floor
-    for b in fuses:
-        solid = solid.fuse(b)
-    print("stage bays valid=", solid.isValid(),
-          "solids=%d" % len(solid.Solids))
+        solid = solid.fuse(box(s * (TRAY_X1 - RAIL_T), s * TRAY_X1,
+                               TRAY_Y0, TRAY_Y1, zf + it, zf + it + 10))
+    solid = solid.fuse(box(-59.0, 59.0, -34.0, -32.0, TK2_Z0, TK2_Z0 + 2))
+    solid = solid.fuse(box(-59.0, 59.0, 32.0, 34.0, TK2_Z0, TK2_Z0 + 2))
+    solid = solid.fuse(box(-59.0, -57.0, -34.0, 34.0, TK2_Z0, TK2_Z1))
+    solid = solid.fuse(box(57.0, 59.0, -34.0, 34.0, TK2_Z0, TK2_Z1))
 
-    fuses = []
-    # ballast pockets (open-top boxes fused at the rear inner wall)
+    # ---- hatch alignment lip on the +Y edge ----
+    solid = solid.fuse(box(HATCH_X0, HATCH_X1, HATCH_Y1,
+                           HATCH_Y1 + 4.0, zf - 2, zf))
+
+    # ---- ballast pockets ----
     for (px0, px1, py0, py1, pz1) in POCKETS:
-        fuses.append(box(px0, px1, py0, py1, zf + FLOOR_T, pz1))
-        fuses.append(box(px0, px1, py0, py1, pz1, pz1 + 2.0))  # rim lip
-    # rear storage tub partition (segments clear the slew pedestal)
-    for s in (1, -1):
-        fuses.append(box(s * 26.0, s * PART_X, PART_Y, PART_Y + PART_T,
-                         zf + FLOOR_T, PART_Z1))
-    # motor cradle rails (both sides; motor box x 29..95, y +-11.25)
-    for s in (1, -1):
-        for sy in (1, -1):
-            fuses.append(box(s * 29.0, s * 95.0,
-                             sy * 11.5, sy * 15.5, zf + FLOOR_T, 42.0))
-        # MI-1 end plates + bosses (holes for screws into the motor face)
-        fuses.append(box(s * 26.0, s * 29.0, -16.0, 16.0, 24.0, 53.0))
-        fuses.append(box(s * 23.0, s * 30.0, -13.0, 13.0, 46.0, 59.5))
-    # caster pods: pad below the floor + dome pass
-    for cy in CASTER_Y:
-        fuses.append(box(-CAST_PL_X / 2 - 2, CAST_PL_X / 2 + 2,
-                         cy - CAST_PL_Y / 2 - 2, cy + CAST_PL_Y / 2 + 2,
-                         Z_FLOOR - POD_DROP, zf))
-        fuses.append(box(-CAST_PL_X / 2, CAST_PL_X / 2,
-                         cy - CAST_PL_Y / 2, cy + CAST_PL_Y / 2,
-                         zf, zf + 1.5))
-    # sensor provisions: flush wall openings + internal mounting ledges
-    # (no protrusion — the D250 silhouette is a hard limit; downtilt = Step 7)
-    for b in fuses:
-        solid = solid.fuse(b)
-    print("stage pockets/cradles valid=", solid.isValid(),
-          "solids=%d" % len(solid.Solids))
+        solid = solid.fuse(box(px0, px1, py0, py1, zf + it, pz1))
+        solid = solid.fuse(box(px0, px1, py0, py1, pz1, pz1 + 2))
 
-    # --- negative cuts ------------------------------------------------------
-    cuts = []
-    # wheel arch reveals through the wall at the axle band
-    for a0 in (-19.0, 161.0):
-        cuts.append(sector_ring(R_IN - 1.0, R_OUT + 2.0,
-                                zf - 1.0, WELL_Z1, a0, a0 + 38.0))
-    # motor floor notches (motor bottoms sit in them)
+    # ---- rear storage tub partition ----
     for s in (1, -1):
-        cuts.append(box(s * 28.0, s * 96.0, -12.6, 12.6, 22.0, 27.0))
-        # wheel hub bore through the wall on the axle line
-        cuts.append(Part.makeCylinder(8.0, 45.0, V(s * 88.0, 0.0, AXLE_Z),
-                                      V(s * 1.0, 0.0, 0.0)))
-        # MI-1 screw holes through the end plates (into the motor face)
-        for h in (1, -1):
-            cuts.append(Part.makeCylinder(MI1_HOLE / 2, 14.0,
-                                          V(s * 36.0, h * MI1_C2C / 2.0,
-                                            AXLE_Z + MI1_OFF),
-                                          V(-s * 1.0, 0.0, 0.0)))
-    # MI-4 tray holes + slew seat holes + slew wire bore
-    for sx in (1, -1):
-        for (hy, d) in ((-112.0, 3.2), (-82.0, 3.2)):
-            cuts.append(cyl(sx * MI4_SQ_X / 2, hy, d / 2, 20.0, 28.0))
-    cuts.append(cyl(0, CASTER_Y[0], CAST_HOLE / 2, 19.0, 27.0))
-    cuts.append(cyl(0, CASTER_Y[1], CAST_HOLE / 2, 19.0, 27.0))
+        solid = solid.fuse(box(s * 26.0, s * PART_X, PART_Y, PART_Y + PART_T,
+                               zf + it, PART_Z1))
+
+    for s in (1, -1):
+        wa0, wa1 = (86.0, 94.0) if s > 0 else (266.0, 274.0)
+        solid = solid.fuse(sector_ring(112.0, R_IN + 1.5, 26.0, 62.0,
+                                       wa0, wa1))
+        solid = solid.fuse(box(s * 30.0, s * 95.0, -14.0, -10.5,
+                               zf + it, 43.0))
+        solid = solid.fuse(box(s * 30.0, s * 95.0, 10.5, 14.0,
+                               zf + it, 43.0))
+        solid = solid.fuse(box(s * 24.0, s * 27.5, -17.0, 17.0,
+                               24.0, 53.0))
+        solid = solid.fuse(box(s * 21.0, s * 30.0, -13.0, 13.0,
+                               46.0, 59.5))
+
+    # ---- perch shelf for electronics (front quadrant) ----
+    solid = solid.fuse(box(-55.0, 55.0, PERCH_Y0, PERCH_Y1,
+                           PERCH_Z0, PERCH_Z1))
+    for s in (1, -1):
+        solid = solid.fuse(box(s * 44.0, s * 55.0, PERCH_Y0, PERCH_Y0 + 6,
+                               zf + it, PERCH_Z1))
+        solid = solid.fuse(box(s * 30.0, s * 42.0, PERCH_Y1 - 8, PERCH_Y1,
+                               zf + it, PERCH_Z1))
+
+    # ---- bumper slide channels (internal C, MI-5 rev) ----
+    for zz in ((30.0, 33.0), (105.0, 108.0)):
+        solid = solid.fuse(sector_ring(109.0, 122.5, zz[0], zz[1],
+                                       90.0 - BUMP_HALF, 90.0 + BUMP_HALF))
+
+    # ---- caster pods ----
     for cy in CASTER_Y:
+        solid = solid.fuse(box(-CAST_PL_X / 2 - 2, CAST_PL_X / 2 + 2,
+                               cy - CAST_PL_Y / 2 - 2, cy + CAST_PL_Y / 2 + 2,
+                               Z_FLOOR - POD_DROP, zf))
+        solid = solid.fuse(box(-16.0, 16.0, cy - CAST_PL_Y / 2,
+                               cy + CAST_PL_Y / 2,
+                               Z_FLOOR - POD_DROP - 1.5, Z_FLOOR - POD_DROP))
+
+    # ---- negative cuts ---------------------------------------------------
+    cuts = []
+    cuts.append(box(HATCH_X0, HATCH_X1, HATCH_Y0, HATCH_Y1, 15.0, zf + it))
+    for s in (1, -1):
+        cuts.append(Part.makeCylinder(8.0, 44.0,
+                                      V(s * 84.0, 0.0, AXLE_Z),
+                                      V(s * 1.0, 0.0, 0.0)))
+        cuts.append(Part.makeCylinder(MI1_HOLE / 2, 12.0,
+                                      V(s * 34.0, MI1_C2C / 2.0,
+                                        AXLE_Z + MI1_OFF),
+                                      V(-s * 1.0, 0.0, 0.0)))
+        cuts.append(Part.makeCylinder(MI1_HOLE / 2, 12.0,
+                                      V(s * 34.0, -MI1_C2C / 2.0,
+                                        AXLE_Z + MI1_OFF),
+                                      V(-s * 1.0, 0.0, 0.0)))
+    for cy in CASTER_Y:
+        cuts.append(cyl(0, cy, 16.0, 19.0, 27.0))
         for sx in (1, -1):
             cuts.append(cyl(sx * CAST_CC / 2, cy, HOLE_D / 2, 17.0, 24.0))
-    for (fx, fy) in ((17.0, 35.0), (17.0, 55.0),
-                     (-17.0, 35.0), (-17.0, 55.0)):
+    for (fx, fy) in SLEW_HOLES:
         cuts.append(cyl(fx, fy, HOLE_D / 2, 18.0, 29.0))
-    cuts.append(cyl(SLEW_WIRE[0], SLEW_WIRE[1], SLEW_WIRE[2], 20.0, 29.0))
-    cuts.append(cone(SLEW_WIRE[0], SLEW_WIRE[1], 7.5, 4.5, 20.0, 26.0))
-    # section flange bolt holes
-    for a in FLG_BOLT_ANG:
+    cuts.append(cyl(SLEW_WIRE[0], SLEW_WIRE[1], SLEW_WIRE[2], 18.0, 29.0))
+    cuts.append(cone(SLEW_WIRE[0], SLEW_WIRE[1], 8.5, 5.0, 18.0, 25.0))
+    for a in (45.0, 135.0, 225.0, 315.0):
         th = math.radians(a)
-        cuts.append(cyl(121.5 * math.cos(th), 121.5 * math.sin(th),
-                        HOLE_D / 2, FLG_Z0 - 2.0, FLG_Z1 + 1.0))
-    # hall-sensor window through the front wall (bar magnet on the other side)
-    cuts.append(box(HALL_POCKET[0], HALL_POCKET[1], 110.0, R_OUT + 1.0,
-                    HALL_POCKET[4], HALL_POCKET[5]))
-    # flush sensor openings + ledges (board A front / board B rear / IR nose)
-    for a0 in (70.0, 250.0):
-        cuts.append(sector_ring(R_IN - 1.0, R_OUT + 1.0,
-                                55.0, 67.0, a0, a0 + 40.0))
-        solid = solid.fuse(sector_ring(110.0, R_IN + 1.5, 52.5, 55.0,
-                                       a0, a0 + 40.0))
+        cuts.append(cyl(119.0 * math.cos(th), 119.0 * math.sin(th),
+                        HOLE_D / 2, Z_TOP - 1, Z_TOP + 2))
+    # sensor windows: front (behind the bar apertures) + rear sonar window
+    for (z0, z1), (a_lo, a_hi) in ((WIN_SONAR[0], WIN_SONAR[1]),
+                                   (WIN_SONAR[0], WIN_SONAR[2])):
+        cuts.append(sector_ring(R_IN - 1.0, R_OUT + 1.0, z0, z1, a_lo, a_hi))
+        solid = solid.fuse(sector_ring(108.0, R_IN - 0.5, z0 - 3.0, z0,
+                                       a_lo, a_hi))
     cuts.append(sector_ring(R_IN - 1.0, R_OUT + 1.0,
-                            IRS_Z0 - 1.0, IRS_Z1 + 1.0, 84.0, 96.0))
-    solid = solid.fuse(sector_ring(112.0, R_IN + 1.5, 27.0, IRS_Z0 - 1.0,
-                                   84.0, 96.0))
+                            WIN_IR[0], WIN_IR[1],
+                            90.0 - WIN_IR[2], 90.0 + WIN_IR[2]))
+    cuts.append(sector_ring(R_IN - 1.0, R_OUT + 1.0,
+                            24.0, 36.0, 90.0 + 24.0, 90.0 + 30.0))
+    cuts.append(sector_ring(R_IN - 1.0, R_OUT + 1.0,
+                            24.0, 36.0, 90.0 - 30.0, 90.0 - 24.0))
+    cuts.append(sector_ring(R_IN - 1.0, R_OUT + 1.0, 52.0, 72.0, 250.0, 290.0))
+    solid = solid.fuse(sector_ring(108.0, R_IN - 0.5, 49.0, 52.0, 250.0, 290.0))
     solid = cut_all(solid, cuts)
-    clean = solid.removeSplitter()
-    if not clean.isValid():
-        try:
-            clean = solid.removeSplitter()      # fresh splitter product
-        except Exception:                        # noqa: BLE001
-            clean = solid
-    if not clean.isValid():
-        try:
-            clean.fix(1e-7, 1e-7, 1e-7)
-        except Exception:                        # noqa: BLE001
-            pass
-    if not clean.isValid() and solid.isValid():
-        clean = solid
-    return clean
 
-
-# --------------------------------------------------------------------------
-# 2) body upper — z 125..150 + rim cap
-# --------------------------------------------------------------------------
-def build_upper():
-    wall = cyl(0, 0, R_OUT, Z_SPLIT, Z_TOP).cut(
-        cyl(0, 0, R_IN, Z_SPLIT - 1, Z_TOP + 1))
-    flange = cyl(0, 0, R_OUT, Z_SPLIT, Z_SPLIT + 4.0).cut(
-        cyl(0, 0, FLG_R0, Z_SPLIT - 1, Z_SPLIT + 5.0))
-    rim = cyl(0, 0, R_OUT, Z_TOP, Z_TOP + 2.0).cut(
-        cyl(0, 0, FLG_R0, Z_TOP - 1, Z_TOP + 3.0))
-    solid = fuse_all([wall, flange, rim])
-
-    fuses = [sector_ring(R_OUT, R_OUT + 3.5, RAIL_Z0, RAIL_Z1,
-                         90.0 - RAIL_ANG1, 90.0 - RAIL_ANG0),
-             sector_ring(R_OUT, R_OUT + 3.5, RAIL_Z0, RAIL_Z1,
-                         90.0 + RAIL_ANG0, 90.0 + RAIL_ANG1)]
-    solid = solid.fuse(fuse_all(fuses))
-
-    cuts = []
-    for a in FLG_BOLT_ANG:                     # matching flange holes
-        th = math.radians(a)
-        cuts.append(cyl(121.5 * math.cos(th), 121.5 * math.sin(th),
-                        HOLE_D / 2, Z_SPLIT - 1.0, Z_SPLIT + 2.0))
-    solid = cut_all(solid, cuts)
+    global LABELS
+    LABELS = [
+        ("18650 BAY", 36.0, -30.0, zf + it, "z", False),
+        ("BANK HERE", -40.0, 0.0, TK2_Z0 + 2, "z", False),
+        ("HATCH DOOR BELOW", 36.0, 10.0, zf - 0.1, "z", False),
+        ("BALLAST", 45.0, -95.0, zf + it, "z", False),
+        ("SOCK BIN", -8.0, -60.0, zf + it, "z", False),
+        ("MOTOR MOUNT", 40.0, -17.0, zf + it, "z", False),
+        ("PERCH ELECTRONICS", 0.0, 62.0, PERCH_Z1, "z", False),
+        ("SLEW PEDESTAL HERE", 0.0, 45.0, zf + it, "z", False),
+        ("SONAR L", 0.0, 110.0, 40.0, "y", False),
+        ("SONAR R", 0.0, 110.0, 40.0, "y", True),
+        ("IR NOSE", -8.0, 112.0, 20.0, "y", False),
+        ("BATTERY 18650 X2", 0.0, -55.0, 40.0, "y", False),
+    ]
+    solid = apply_labels(solid)
     clean = solid.removeSplitter()
     if not clean.isValid():
         try:
             clean.fix(1e-7, 1e-7, 1e-7)
-        except Exception:                        # noqa: BLE001
+        except Exception:
             pass
     if not clean.isValid():
         clean = solid
@@ -405,26 +348,68 @@ def build_upper():
 
 
 # --------------------------------------------------------------------------
-# 3) bumper bar — TPU crash face, +-40 deg arc (MI-5)
+# 2) hatch door — tool-free battery access (snap tabs, no screws)
+# --------------------------------------------------------------------------
+def build_hatch():
+    t = 3.0
+    dx0, dx1 = HATCH_X0 - 0.7, HATCH_X1 + 0.7
+    dy0, dy1 = HATCH_Y0 - 0.7, HATCH_Y1 + 0.7
+    door = box(dx0, dx1, dy0, dy1, 0.0, t)
+    # snap tabs on the -Y edge (clip under the far lip), two per side
+    for sx in (1, -1):
+        door = door.fuse(box(sx * 12.0 - 4.0, sx * 12.0 + 4.0,
+                             dy0 - 2.0, dy0 + 3.0, -3.0, t))
+        door = door.fuse(box(sx * 40.0 - 4.0, sx * 40.0 + 4.0,
+                             dy0 - 2.0, dy0 + 3.0, -3.0, t))
+    # finger slot at the +Y edge
+    door = door.cut(box(-12.0, 12.0, dy1 - 6.0, dy1 + 1.0, t - 1.6, t + 1.0))
+    # label
+    door = apply_labels_static(door, [("BATTERY DOOR", 0.0, 0.0, t, "z")],
+                               36.0, 0.0)
+    clean = door.removeSplitter()
+    if not clean.isValid():
+        clean = door
+    return clean
+
+
+def apply_labels_static(shape, entries, cx=0.0, cy=0.0, depth=0.8, size=6.0):
+    for (text, ox, oy, oz, axis) in entries:
+        wires = Part.makeWireString(text, FONT, size)
+        solids = []
+        for grp in wires:
+            for w in grp:
+                try:
+                    f = Part.Face([w])
+                    solids.append(f.extrude(V(0, 0, depth)))
+                except Exception:
+                    pass
+        if not solids:
+            continue
+        txt = fuse_all(solids).translate(V(cx + ox, cy + oy, oz))
+        shape = shape.fuse(txt)
+    return shape
+
+
+# --------------------------------------------------------------------------
+# 3) bumper bar — TPU, 80-arc flush with the D250 line, slides inward
 # --------------------------------------------------------------------------
 def build_bumper():
-    bar = sector_ring(BUMP_R0, BUMP_R1, BUMP_Z0, BUMP_Z1,
+    bar = sector_ring(BUMP_R0, BUMP_R1, BUMP_ZN, BUMP_ZF,
                       90.0 - BUMP_HALF, 90.0 + BUMP_HALF)
-    # magnet pocket on the inner face (pairs with the hall window)
-    bar = bar.cut(box(MAG_POCKET[0], MAG_POCKET[1],
-                      BUMP_R0 - 1.0, BUMP_R1 + 0.5,
-                      MAG_POCKET[4], MAG_POCKET[5]))
-    # travel-stop ribs at both arc ends (ride the printed guide rails)
-    bar = bar.fuse(sector_ring(BUMP_R0 - 1.5, BUMP_R1, BUMP_Z0, BUMP_Z1,
-                               90.0 - BUMP_HALF, 90.0 - BUMP_HALF + 6.0))
-    bar = bar.fuse(sector_ring(BUMP_R0 - 1.5, BUMP_R1, BUMP_Z0, BUMP_Z1,
-                               90.0 + BUMP_HALF - 6.0, 90.0 + BUMP_HALF))
+    # inward slide flanges (ride the printed channels)
+    bar = bar.fuse(sector_ring(112.0, BUMP_R0, FLG1_Z0, FLG1_Z1,
+                               90.0 - BUMP_HALF, 90.0 + BUMP_HALF))
+    bar = bar.fuse(sector_ring(112.0, BUMP_R0, FLG2_Z0, FLG2_Z1,
+                               90.0 - BUMP_HALF, 90.0 + BUMP_HALF))
+    # sensor apertures (labeled): sonar L/R, IR nose, cliffs L/R
+    bar = bar.cut(sector_ring(111.0, 126.0, 50.0, 72.0, 98.0, 122.0))
+    bar = bar.cut(sector_ring(111.0, 126.0, 50.0, 72.0, 58.0, 82.0))
+    bar = bar.cut(sector_ring(111.0, 126.0, 26.0, 40.0, 87.0, 93.0))
+    bar = bar.cut(sector_ring(111.0, 126.0, 24.0, 38.0, 114.0, 120.0))
+    bar = bar.cut(sector_ring(111.0, 126.0, 24.0, 38.0, 60.0, 66.0))
+    # hall magnet pocket on the inner face
+    bar = bar.cut(sector_ring(122.4, 126.0, 87.0, 95.0, 86.0, 94.0))
     clean = bar.removeSplitter()
-    if not clean.isValid():
-        try:
-            clean.fix(1e-7, 1e-7, 1e-7)
-        except Exception:                        # noqa: BLE001
-            pass
     if not clean.isValid():
         clean = bar
     return clean
@@ -435,12 +420,11 @@ def build_bumper():
 # --------------------------------------------------------------------------
 def main():
     os.makedirs(os.path.normpath(OUT), exist_ok=True)
-    print("HooverBot car body: building 3 sketch parts ...")
-    export(build_lower(), "body_lower.stl")
-    export(build_upper(), "body_upper.stl")
+    print("HooverBot car body v2: building 3 sketch parts ...")
+    export(build_shell(), "body_shell.stl")
+    export(build_hatch(), "hatch_door.stl")
     export(build_bumper(), "bumper_bar.stl")
     print("done.")
 
 
 main()
-
